@@ -41,10 +41,12 @@ endif
 
 if get_option('disable-rtti')
 	desired_cpp_compile_flags += '-fno-rtti'
+	desired_native_cpp_compile_flags += '-fno-rtti'
 endif
 
 if get_option('disable-exceptions')
 	desired_cpp_compile_flags += ['-fno-exceptions', '-fno-unwind-tables']
+	desired_native_cpp_compile_flags += ['-fno-exceptions', '-fno-unwind-tables']
 endif
 
 if get_option('enable-pedantic')
