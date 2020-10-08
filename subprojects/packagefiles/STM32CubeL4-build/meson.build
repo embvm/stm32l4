@@ -17,36 +17,6 @@ stm32_cmsis_dep = declare_dependency(
 	)
 )
 
-#######
-# BSP #
-#######
-
-stm32l4xx_nucleo_144_bsp_dep = declare_dependency(
-	sources: files(
-		'Drivers/BSP/STM32L4xx_Nucleo_144/stm32l4xx_nucleo_144.c',
-	),
-	include_directories: include_directories(
-		'Drivers/BSP/STM32L4xx_Nucleo_144/',
-		is_system: true
-	)
-)
-
-##############
-# Processors #
-##############
-
-stm32l4r5_dep = declare_dependency(
-	sources: files(
-		#Core/Src/stm32l4xx_it.c \
-		#Core/Src/stm32l4xx_hal_msp.c \
-		#Core/Src/system_stm32l4xx.c
-		#startup_stm32l4r5xx.s
-	),
-	compile_args: [
-		'-DSTM32L4R5xx',
-	]
-)
-
 #####################
 # STM32 HAL Drivers #
 #####################
@@ -176,9 +146,39 @@ stm32_ll_dep = declare_dependency(
 	)
 )
 
-############
-# Examples #
-############
+##############
+# Processors #
+##############
+
+stm32l4r5_dep = declare_dependency(
+	sources: files(
+		#Core/Src/stm32l4xx_it.c \
+		#Core/Src/stm32l4xx_hal_msp.c \
+		#Core/Src/system_stm32l4xx.c
+		#startup_stm32l4r5xx.s
+	),
+	compile_args: [
+		'-DSTM32L4R5xx',
+	]
+)
+
+#######
+# BSP #
+#######
+
+stm32l4xx_nucleo_144_bsp_dep = declare_dependency(
+	sources: files(
+		'Drivers/BSP/STM32L4xx_Nucleo_144/stm32l4xx_nucleo_144.c',
+	),
+	include_directories: include_directories(
+		'Drivers/BSP/STM32L4xx_Nucleo_144/',
+		is_system: true
+	)
+)
+
+########################
+# Example Applications #
+########################
 
 power_run_smps = executable('example_power_run_smps',
 	sources: files(
@@ -202,7 +202,8 @@ power_run_smps = executable('example_power_run_smps',
 		stm32l4r5_dep,
 		stm32_cmsis_dep,
 		stm32l4xx_nucleo_144_bsp_dep
-	]
+	],
+	build_by_default: meson.is_subproject() == false
 )
 
 power_run_smps_hex = custom_target('power_run_smps.hex',
@@ -212,5 +213,5 @@ power_run_smps_hex = custom_target('power_run_smps.hex',
 		meson.get_external_property('objcopy', '', native: false),
 		'-O', 'ihex', '@INPUT@', '@OUTPUT@'
 	],
-	build_by_default: true
+	build_by_default: meson.is_subproject() == false
 )
