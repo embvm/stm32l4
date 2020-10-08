@@ -12,7 +12,7 @@ project('STM32CubeL4',
 stm32_cmsis_dep = declare_dependency(
 	include_directories: include_directories(
 		'Drivers/CMSIS/Include',
-		'Drivers/CMSIS/Device/ST/STM32L4xx',
+		'Drivers/CMSIS/Device/ST/STM32L4xx/Include',
 		is_system: true
 	)
 )
@@ -180,18 +180,37 @@ stm32_ll_dep = declare_dependency(
 # Examples #
 ############
 
-power_run_smps = executable(
+power_run_smps = executable('example_power_run_smps',
 	sources: files(
 		'Projects/NUCLEO-L4R5ZI-P/Examples/PWR/PWR_RUN_SMPS/Src/main.c',
 		'Projects/NUCLEO-L4R5ZI-P/Examples/PWR/PWR_RUN_SMPS/Src/stm32l4xx_hal_msp.c',
 		'Projects/NUCLEO-L4R5ZI-P/Examples/PWR/PWR_RUN_SMPS/Src/stm32l4xx_it.c',
 		'Projects/NUCLEO-L4R5ZI-P/Examples/PWR/PWR_RUN_SMPS/Src/system_stm32l4xx.c',
+		'Projects/NUCLEO-L4R5ZI-P/Examples/PWR/PWR_RUN_SMPS/SW4STM32/startup_stm32l4r5xx.s'
 	),
 	include_directories: include_directories('Projects/NUCLEO-L4R5ZI-P/Examples/PWR/PWR_RUN_SMPS/Inc'),
+	c_args: [
+		'-DUSE_STM32L4XX_NUCLEO_144_SMPS',
+		'-DUSE_ADP5301ACBZ',
+	],
+	link_args: [
+		'-L' + meson.current_source_dir() / 'Projects/NUCLEO-L4R5ZI-P/Examples/PWR/PWR_RUN_SMPS/SW4STM32/STM32L4R5ZI_NUCLEO',
+		'-T' + 'STM32L4R5ZITx_FLASH.ld',
+	],
 	dependencies: [
 		stm32_hal_dep,
 		stm32l4r5_dep,
 		stm32_cmsis_dep,
 		stm32l4xx_nucleo_144_bsp_dep
 	]
+)
+
+power_run_smps_hex = custom_target('power_run_smps.hex',
+	input: power_run_smps,
+	output: 'power_run_smps.hex',
+	command: [
+		meson.get_external_property('objcopy', '', native: false),
+		'-O', 'ihex', '@INPUT@', '@OUTPUT@'
+	],
+	build_by_default: true
 )
