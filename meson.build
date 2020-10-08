@@ -102,12 +102,12 @@ clangtidy_files = []
 # Add dependencies to this array for testing with Catch2
 catch2_tests_dep = []
 
-subdir('src')
-subdir('test')
+#subdir('src')
+#subdir('test')
 
 # Defined after src and test so catch2_dep is fully populated
 # when creating the built-in targets
-subdir('build/test/catch2')
+#subdir('build/test/catch2')
 
 ###################
 # Tooling Modules #
