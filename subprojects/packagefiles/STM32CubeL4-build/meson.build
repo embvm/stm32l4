@@ -175,3 +175,23 @@ stm32_ll_dep = declare_dependency(
 		is_system: true
 	)
 )
+
+############
+# Examples #
+############
+
+power_run_smps = executable(
+	sources: files(
+		'Projects/NUCLEO-L4R5ZI-P/Examples/PWR/PWR_RUN_SMPS/Src/main.c',
+		'Projects/NUCLEO-L4R5ZI-P/Examples/PWR/PWR_RUN_SMPS/Src/stm32l4xx_hal_msp.c',
+		'Projects/NUCLEO-L4R5ZI-P/Examples/PWR/PWR_RUN_SMPS/Src/stm32l4xx_it.c',
+		'Projects/NUCLEO-L4R5ZI-P/Examples/PWR/PWR_RUN_SMPS/Src/system_stm32l4xx.c',
+	),
+	include_directories: include_directories('Projects/NUCLEO-L4R5ZI-P/Examples/PWR/PWR_RUN_SMPS/Inc'),
+	dependencies: [
+		stm32_hal_dep,
+		stm32l4r5_dep,
+		stm32_cmsis_dep,
+		stm32l4xx_nucleo_144_bsp_dep
+	]
+)
