@@ -1,0 +1,5 @@
+[wrap-git]
+url = https://github.com/STMicroelectronics/STM32CubeL4.git
+revision = v1.16.0
+patch_directory = STM32CubeL4-build
+depth = 1
