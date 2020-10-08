@@ -11,7 +11,7 @@ project('PROJECT_NAME',
 		'c_std=c11', 'build.c_std=c11',
 		'cpp_std=c++17', 'build.cpp_std=c++17',
 	],
-	meson_version: '>=0.54.0',
+	meson_version: '>=0.55.0',
 	version: '0.1'
 )
 
@@ -90,11 +90,7 @@ subdir('build/objcopy')
 # Subprojects #
 ###############
 
-libmemory_subproject = subproject('libmemory')
-etl_subproject = subproject('etl')
-
-libmemory_freelist_dep = libmemory_subproject.get_variable('libmemory_freelist_dep')
-etl_dep = etl_subproject.get_variable('etl_dep')
+stm32cube_subproject = subproject('STM32CubeL4')
 
 # Configure the project to include `libc` headers by default
 #######################
