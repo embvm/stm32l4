@@ -91,11 +91,18 @@ subdir('build/objcopy')
 ###############
 
 stm32cube_subproject = subproject('STM32CubeL4')
+stm32_cmsis_device_dep = stm32cube_subproject.get_variable('stm32_cmsis_device_dep')
+stm32_hal_dep = stm32cube_subproject.get_variable('stm32_hal_dep')
+stm32_ll_dep = stm32cube_subproject.get_variable('stm32_ll_dep')
 
 embvm_core_subproject = subproject('embvm-core')
 framework_include_dep = embvm_core_subproject.get_variable('framework_include_dep')
 framework_host_include_dep = embvm_core_subproject.get_variable('framework_host_include_dep')
 framework_threadless_dep = embvm_core_subproject.get_variable('framework_threadless_dep')
+
+arm_architecture_subproject = subproject('arm-architecture')
+arm_dep = arm_architecture_subproject.get_variable('arm_dep')
+arm_common_utilties_dep = arm_architecture_subproject.get_variable('arm_common_utilties_dep')
 
 # Configure the project to include `libc` headers by default
 #######################
