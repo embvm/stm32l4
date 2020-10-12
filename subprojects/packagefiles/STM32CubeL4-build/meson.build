@@ -1,4 +1,5 @@
 project('STM32CubeL4',
+	'c',
 	version: '1.16.0'
 )
 
