@@ -26,7 +26,7 @@ void NucleoL4RZI_DemoPlatform::earlyInitHook_() noexcept
 	NucleoL4R5ZI_HWPlatform::earlyInitHook();
 }
 
-void NucleoL4RZI_DemoPlatform::initOS_(void (*main_thread_func)()) noexcept
+void NucleoL4RZI_DemoPlatform::initOS_() noexcept
 {
 	// TODO: freertos threaded support
 }

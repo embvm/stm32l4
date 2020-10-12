@@ -9,6 +9,7 @@
 #include <platform/virtual_platform.hpp>
 #include <boot/boot_sequencer.hpp>
 #include <NucleoL4RZI_HWPlatform.hpp>
+#include <platform_options.hpp>
 
 /// Signal variable to exit the main() loop
 /// Declared in main.cpp
@@ -26,7 +27,7 @@ class NucleoL4RZI_DemoPlatform final
   	// APIs to required by base class
 	static void earlyInitHook_() noexcept;
 	static void initOS_() noexcept;
-	void init_();
+	void init_() noexcept;
 	void initProcessor_() noexcept;
 	void initHWPlatform_() noexcept;
 
@@ -34,8 +35,8 @@ class NucleoL4RZI_DemoPlatform final
 	void startBlink() noexcept;
 
 	// Constructor/destructor
-	BlinkyDemoPlatform() noexcept : PlatformBase("Nucleo-L4R5ZI Demo Platform") {};
-	~BlinkyDemoPlatform() = default;
+	NucleoL4RZI_DemoPlatform() noexcept : PlatformBase("Nucleo-L4R5ZI Demo Platform") {}
+	~NucleoL4RZI_DemoPlatform() = default;
 
   private:
 	NucleoL4R5ZI_HWPlatform hw_platform_;

@@ -92,6 +92,11 @@ subdir('build/objcopy')
 
 stm32cube_subproject = subproject('STM32CubeL4')
 
+embvm_core_subproject = subproject('embvm-core')
+framework_include_dep = embvm_core_subproject.get_variable('framework_include_dep')
+framework_host_include_dep = embvm_core_subproject.get_variable('framework_host_include_dep')
+framework_threadless_dep = embvm_core_subproject.get_variable('framework_threadless_dep')
+
 # Configure the project to include `libc` headers by default
 #######################
 # Process Source Tree #

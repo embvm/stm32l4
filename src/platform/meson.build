@@ -1,1 +1,1 @@
-subdir('nucleo_l45rzi_demo')
+subdir('nucleo_l4r5zi_demo')

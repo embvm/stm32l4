@@ -1,4 +1,4 @@
-#include "nucleo_l4r5zi_hw_platform.hpp"
+#include "NucleoL4RZI_HWPlatform.hpp"
 
 NucleoL4R5ZI_HWPlatform::~NucleoL4R5ZI_HWPlatform() noexcept {}
 

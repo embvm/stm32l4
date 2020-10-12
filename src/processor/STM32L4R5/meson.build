@@ -9,7 +9,8 @@ stm32l4r5 = static_library('stm32l4r5',
 
 	],
 	dependencies: [
-
+	    framework_include_dep,
+        framework_host_include_dep,
 	],
 	build_by_default: meson.is_subproject() == false
 )

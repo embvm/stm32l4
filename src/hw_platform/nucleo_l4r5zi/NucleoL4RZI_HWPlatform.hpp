@@ -11,7 +11,7 @@ class NucleoL4R5ZI_HWPlatform : public embvm::VirtualHwPlatformBase<NucleoL4R5ZI
 
   public:
 	/// @brief Default constructor.
-	NucleoL4R5ZI_HWPlatform() noexcept : PlatformBase("NUCLEO-L4R5ZI Development Board") {}
+	NucleoL4R5ZI_HWPlatform() noexcept : HWPlatformBase("NUCLEO-L4R5ZI Development Board") {}
 
 	/// @brief Default destructor.
 	~NucleoL4R5ZI_HWPlatform() noexcept;
