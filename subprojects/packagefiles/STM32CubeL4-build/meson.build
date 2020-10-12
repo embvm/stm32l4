@@ -13,6 +13,12 @@ project('STM32CubeL4',
 stm32_cmsis_dep = declare_dependency(
 	include_directories: include_directories(
 		'Drivers/CMSIS/Include',
+		is_system: true
+	)
+)
+
+stm32_cmsis_device_dep = declare_dependency(
+	include_directories: include_directories(
 		'Drivers/CMSIS/Device/ST/STM32L4xx/Include',
 		is_system: true
 	)
@@ -202,6 +208,7 @@ power_run_smps = executable('example_power_run_smps',
 		stm32_hal_dep,
 		stm32l4r5_dep,
 		stm32_cmsis_dep,
+		stm32_cmsis_device_dep,
 		stm32l4xx_nucleo_144_bsp_dep
 	],
 	build_by_default: meson.is_subproject() == false
