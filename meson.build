@@ -103,6 +103,7 @@ framework_threadless_dep = embvm_core_subproject.get_variable('framework_threadl
 arm_architecture_subproject = subproject('arm-architecture')
 arm_dep = arm_architecture_subproject.get_variable('arm_dep')
 arm_common_utilties_dep = arm_architecture_subproject.get_variable('arm_common_utilties_dep')
+cmsis_cortex_m_include = arm_architecture_subproject.get_variable('cmsis_cortex_m_include')
 
 # Configure the project to include `libc` headers by default
 #######################
