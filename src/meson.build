@@ -1,3 +1,4 @@
-subdir('utility')
-subdir('lib')
+subdir('processor')
+subdir('hw_platform')
+subdir('platform')
 subdir('app')
