@@ -59,6 +59,12 @@ if get_option('enable-pedantic-error')
 	desired_common_compile_flags += '-pedantic-error'
 endif
 
+if get_option('enable-threading') == false
+    # This will stop the compiler from emiting __cxa_guard_acquire and __cxa_guard_release
+    desired_cpp_compile_flags += ['-fno-threadsafe-statics', '-fno-use-cxa-atexit']
+    desired_native_cpp_compile_flags += ['-fno-threadsafe-statics', '-fno-use-cxa-atexit']
+endif
+
 compile_settings_list = [
 	{'lang': 'c', 'compiler': host_c_compiler, 'flags': desired_c_compile_flags, 'isnative': false},
 	{'lang': 'c', 'compiler': native_c_compiler, 'flags': desired_native_c_compile_flags, 'isnative': true},

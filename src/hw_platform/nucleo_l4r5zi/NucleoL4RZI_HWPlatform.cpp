@@ -24,3 +24,8 @@ void NucleoL4R5ZI_HWPlatform::initProcessor_() noexcept
 {
 	processor_.init();
 }
+
+void NucleoL4R5ZI_HWPlatform::startBlink() noexcept
+{
+	// TODO
+}

@@ -7,7 +7,7 @@
   *                - Set the initial SP
   *                - Set the initial PC == Reset_Handler,
   *                - Set the vector table entries with the exceptions ISR address,
-  *                - Configure the clock system  
+  *                - Configure the clock system
   *                - Branches to main in the C library (which eventually
   *                  calls main()).
   *            After Reset the Cortex-M4 processor is in Thread mode,
@@ -34,24 +34,12 @@
 .global	g_pfnVectors
 .global	Default_Handler
 
-/* start address for the initialization values of the .data section.
-defined in linker script */
-.word	_sidata
-/* start address for the .data section. defined in linker script */
-.word	_sdata
-/* end address for the .data section. defined in linker script */
-.word	_edata
-/* start address for the .bss section. defined in linker script */
-.word	_sbss
-/* end address for the .bss section. defined in linker script */
-.word	_ebss
-
 .equ  BootRAM,        0xF1E0F85F
 /**
  * @brief  This is the code that gets called when the processor first
  *          starts execution following a reset event. Only the absolutely
  *          necessary set is performed, after which the application
- *          supplied main() routine is called.
+ *          supplied entry() routine is called.
  * @param  None
  * @retval : None
 */
@@ -60,47 +48,43 @@ defined in linker script */
 	.weak	Reset_Handler
 	.type	Reset_Handler, %function
 Reset_Handler:
-  ldr   sp, =_estack    /* Set stack pointer */
+  ldr   sp, =__StackTop    /* Set stack pointer to top of stack. */
 
 /* Call the clock system initialization function.*/
     bl  SystemInit
 
-/* Copy the data segment initializers from flash to SRAM */
-  movs	r1, #0
-  b	LoopCopyDataInit
+/* Loop to copy data from read only memory to RAM.
+ * The ranges of copy from/to are specified by following symbols:
+ *      __etext: LMA of start of the section to copy from. Usually end of text
+ *      __data_start__: VMA of start of the section to copy to.
+ *      __bss_start__: VMA of end of the section to copy to. Normally __data_end__ is used, but by using __bss_start__
+ *                    the user can add their own initialized data section before BSS section with the INSERT AFTER command.
+ *
+ * All addresses must be aligned to 4 bytes boundary.
+ */
+#ifndef __STARTUP_SKIP_ETEXT
+    ldr r1, =__etext
+    ldr r2, =__data_start__
+    ldr r3, =__bss_start__
 
-CopyDataInit:
-	ldr	r3, =_sidata
-	ldr	r3, [r3, r1]
-	str	r3, [r0, r1]
-	adds	r1, r1, #4
+    subs r3, r3, r2
+    ble .L_loop1_done
 
-LoopCopyDataInit:
-	ldr	r0, =_sdata
-	ldr	r3, =_edata
-	adds	r2, r0, r1
-	cmp	r2, r3
-	bcc	CopyDataInit
-	ldr	r2, =_sbss
-	b	LoopFillZerobss
-/* Zero fill the bss segment. */
-FillZerobss:
-	movs	r3, #0
-	str	r3, [r2], #4
+.L_loop1:
+    subs r3, r3, #4
+    ldr r0, [r1,r3]
+    str r0, [r2,r3]
+    bgt .L_loop1
 
-LoopFillZerobss:
-	ldr	r3, = _ebss
-	cmp	r2, r3
-	bcc	FillZerobss
+.L_loop1_done:
+#endif
 
-/* Call static constructors */
-    bl __libc_init_array
-/* Call the application's entry point.*/
-	bl	main
+/* Call the libc entry point.*/
+	bl	_start
 
 LoopForever:
     b LoopForever
-    
+
 .size	Reset_Handler, .-Reset_Handler
 
 /**
@@ -129,7 +113,7 @@ Infinite_Loop:
 
 
 g_pfnVectors:
-	.word	_estack
+	.word	__StackTop
 	.word	Reset_Handler
 	.word	NMI_Handler
 	.word	HardFault_Handler
@@ -458,86 +442,86 @@ g_pfnVectors:
 	.thumb_set DMA2_Channel5_IRQHandler,Default_Handler
 
 	.weak	DFSDM1_FLT0_IRQHandler
-	.thumb_set DFSDM1_FLT0_IRQHandler,Default_Handler	
-	
+	.thumb_set DFSDM1_FLT0_IRQHandler,Default_Handler
+
 	.weak	DFSDM1_FLT1_IRQHandler
-	.thumb_set DFSDM1_FLT1_IRQHandler,Default_Handler	
-	
+	.thumb_set DFSDM1_FLT1_IRQHandler,Default_Handler
+
 	.weak	DFSDM1_FLT2_IRQHandler
-	.thumb_set DFSDM1_FLT2_IRQHandler,Default_Handler	
-	
+	.thumb_set DFSDM1_FLT2_IRQHandler,Default_Handler
+
 	.weak	COMP_IRQHandler
 	.thumb_set COMP_IRQHandler,Default_Handler
-	
+
 	.weak	LPTIM1_IRQHandler
 	.thumb_set LPTIM1_IRQHandler,Default_Handler
-	
+
 	.weak	LPTIM2_IRQHandler
-	.thumb_set LPTIM2_IRQHandler,Default_Handler	
-	
+	.thumb_set LPTIM2_IRQHandler,Default_Handler
+
 	.weak	OTG_FS_IRQHandler
-	.thumb_set OTG_FS_IRQHandler,Default_Handler	
-	
+	.thumb_set OTG_FS_IRQHandler,Default_Handler
+
 	.weak	DMA2_Channel6_IRQHandler
-	.thumb_set DMA2_Channel6_IRQHandler,Default_Handler	
-	
+	.thumb_set DMA2_Channel6_IRQHandler,Default_Handler
+
 	.weak	DMA2_Channel7_IRQHandler
-	.thumb_set DMA2_Channel7_IRQHandler,Default_Handler	
-	
+	.thumb_set DMA2_Channel7_IRQHandler,Default_Handler
+
 	.weak	LPUART1_IRQHandler
-	.thumb_set LPUART1_IRQHandler,Default_Handler	
-	
+	.thumb_set LPUART1_IRQHandler,Default_Handler
+
 	.weak	OCTOSPI1_IRQHandler
-	.thumb_set OCTOSPI1_IRQHandler,Default_Handler	
-	
+	.thumb_set OCTOSPI1_IRQHandler,Default_Handler
+
 	.weak	I2C3_EV_IRQHandler
-	.thumb_set I2C3_EV_IRQHandler,Default_Handler	
-	
+	.thumb_set I2C3_EV_IRQHandler,Default_Handler
+
 	.weak	I2C3_ER_IRQHandler
-	.thumb_set I2C3_ER_IRQHandler,Default_Handler	
-	
+	.thumb_set I2C3_ER_IRQHandler,Default_Handler
+
 	.weak	SAI1_IRQHandler
 	.thumb_set SAI1_IRQHandler,Default_Handler
-	
+
 	.weak	SAI2_IRQHandler
 	.thumb_set SAI2_IRQHandler,Default_Handler
-	
+
 	.weak	OCTOSPI2_IRQHandler
 	.thumb_set OCTOSPI2_IRQHandler,Default_Handler
-	
+
 	.weak	TSC_IRQHandler
 	.thumb_set TSC_IRQHandler,Default_Handler
-	
+
 	.weak	RNG_IRQHandler
 	.thumb_set RNG_IRQHandler,Default_Handler
-	
+
 	.weak	FPU_IRQHandler
 	.thumb_set FPU_IRQHandler,Default_Handler
-	
+
 	.weak	CRS_IRQHandler
-	.thumb_set CRS_IRQHandler,Default_Handler	
-	
+	.thumb_set CRS_IRQHandler,Default_Handler
+
 	.weak	I2C4_ER_IRQHandler
 	.thumb_set I2C4_ER_IRQHandler,Default_Handler
-	
+
 	.weak	I2C4_EV_IRQHandler
 	.thumb_set I2C4_EV_IRQHandler,Default_Handler
-	
+
 	.weak	DCMI_IRQHandler
 	.thumb_set DCMI_IRQHandler,Default_Handler
-	
+
 	.weak	DMA2D_IRQHandler
 	.thumb_set DMA2D_IRQHandler,Default_Handler
 
 	.weak	LTDC_IRQHandler
 	.thumb_set LTDC_IRQHandler,Default_Handler
-	
+
 	.weak	LTDC_ER_IRQHandler
 	.thumb_set LTDC_ER_IRQHandler,Default_Handler
-	
+
 	.weak	GFXMMU_IRQHandler
 	.thumb_set GFXMMU_IRQHandler,Default_Handler
-	
+
 	.weak	DMAMUX1_OVR_IRQHandler
 	.thumb_set DMAMUX1_OVR_IRQHandler,Default_Handler
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

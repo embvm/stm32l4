@@ -4,11 +4,17 @@
  */
 
 #include "platform.hpp"
+#include <printf.h> // for _putchar definition
 // TODO: test memory setup with linker scripts
 //#include <malloc.h>
 
 //extern int __HeapBase;
 //extern int __HeapLimit;
+
+void _putchar(char c)
+{
+	// TODO:
+}
 
 namespace
 {
