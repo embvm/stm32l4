@@ -128,7 +128,7 @@ stm32_ll_dep = declare_dependency(
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_dma.c',
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_dma2d.c',
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_exti.c',
-		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_fmc.c',
+		#'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_fmc.c', # Actually depends on HAL
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_gpio.c',
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_i2c.c',
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_lptim.c',
@@ -139,18 +139,19 @@ stm32_ll_dep = declare_dependency(
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rcc.c',
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rng.c',
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_rtc.c',
-		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_sdmmc.c',
+		#'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_sdmmc.c', # Actually depends on HAL
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_spi.c',
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_swpmi.c',
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_tim.c',
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_usart.c',
-		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_usb.c',
+		#'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_usb.c', # Actually depends on HAL
 		'Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_utils.c',
 	),
 	include_directories: include_directories(
 		'Drivers/STM32L4xx_HAL_Driver/Inc',
 		is_system: true
-	)
+	),
+	compile_args: '-DUSE_FULL_LL_DRIVER',
 )
 
 ##############
