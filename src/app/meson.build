@@ -4,6 +4,7 @@ blinky_stm32l4r5zi = executable('blinky_stm32l4r5zi',
 		nucleo_l4r5zi_demo_platform_dep,
 	],
 	install: false,
+	link_args: host_map_file.format('blinky_stm32l4r5zi'),
 	build_by_default: meson.is_subproject() == false
 )
 

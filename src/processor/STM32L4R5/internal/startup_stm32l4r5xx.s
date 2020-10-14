@@ -34,6 +34,11 @@
 .global	g_pfnVectors
 .global	Default_Handler
 
+// Reserve space for linker symbols used by this file.
+.word __etext
+.word __data_start__
+.word __bss_start__
+
 .equ  BootRAM,        0xF1E0F85F
 /**
  * @brief  This is the code that gets called when the processor first
@@ -43,7 +48,6 @@
  * @param  None
  * @retval : None
 */
-
     .section	.text.Reset_Handler
 	.weak	Reset_Handler
 	.type	Reset_Handler, %function

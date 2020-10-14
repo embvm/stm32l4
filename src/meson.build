@@ -1,3 +1,4 @@
+subdir('drivers')
 subdir('processor')
 subdir('hw_platform')
 subdir('platform')

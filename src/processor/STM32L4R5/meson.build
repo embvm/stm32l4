@@ -25,6 +25,7 @@ stm32l4r5 = static_library('stm32l4r5',
         framework_host_include_dep,
         stm32_cmsis_device_dep,
         arm_dep,
+        stm32_common_drivers_dep,
 	],
 	build_by_default: meson.is_subproject() == false
 )
@@ -32,6 +33,7 @@ stm32l4r5 = static_library('stm32l4r5',
 stm32l4r5_processor_dep = declare_dependency(
 	include_directories: [
 		include_directories('.', is_system: true),
+		stm32_common_drivers_include
 	],
 	dependencies: [
 

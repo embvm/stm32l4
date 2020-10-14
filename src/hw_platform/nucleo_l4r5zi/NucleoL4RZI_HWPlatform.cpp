@@ -1,12 +1,29 @@
 #include "NucleoL4RZI_HWPlatform.hpp"
 
+// TODO: workaround - remove later
+void free(void* p)
+{
+
+}
+
 NucleoL4R5ZI_HWPlatform::~NucleoL4R5ZI_HWPlatform() noexcept {}
 
 void NucleoL4R5ZI_HWPlatform::earlyInitHook_() noexcept {}
 
-void NucleoL4R5ZI_HWPlatform::init_() noexcept {}
+void NucleoL4R5ZI_HWPlatform::init_() noexcept
+{
+	// start all LEDs
+	// turn them off? Or just trust that they start off?
+	led1.start();
+	led2.start();
+	led3.start();
+}
 
-void NucleoL4R5ZI_HWPlatform::leds_off() noexcept {}
+void NucleoL4R5ZI_HWPlatform::leds_off() noexcept {
+	led1.off();
+	led2.off();
+	led3.off();
+}
 
 void NucleoL4R5ZI_HWPlatform::hard_reset_() noexcept
 {
@@ -27,5 +44,7 @@ void NucleoL4R5ZI_HWPlatform::initProcessor_() noexcept
 
 void NucleoL4R5ZI_HWPlatform::startBlink() noexcept
 {
-	// TODO
+	led1.on();
+	led2.on();
+	led3.on();
 }
