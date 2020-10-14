@@ -1,10 +1,7 @@
 #include "NucleoL4RZI_HWPlatform.hpp"
 
 // TODO: workaround - remove later
-void free(void* p)
-{
-
-}
+void free(void* p) {}
 
 NucleoL4R5ZI_HWPlatform::~NucleoL4R5ZI_HWPlatform() noexcept {}
 
@@ -19,7 +16,8 @@ void NucleoL4R5ZI_HWPlatform::init_() noexcept
 	led3.start();
 }
 
-void NucleoL4R5ZI_HWPlatform::leds_off() noexcept {
+void NucleoL4R5ZI_HWPlatform::leds_off() noexcept
+{
 	led1.off();
 	led2.off();
 	led3.off();

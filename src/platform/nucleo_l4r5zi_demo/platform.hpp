@@ -6,9 +6,9 @@
 #ifndef NUCLEO_L4RZI_DEMO_PLATFORM_HPP_
 #define NUCLEO_L4RZI_DEMO_PLATFORM_HPP_
 
-#include <platform/virtual_platform.hpp>
-#include <boot/boot_sequencer.hpp>
 #include <NucleoL4RZI_HWPlatform.hpp>
+#include <boot/boot_sequencer.hpp>
+#include <platform/virtual_platform.hpp>
 #include <platform_options.hpp>
 
 /// Signal variable to exit the main() loop
@@ -16,15 +16,13 @@
 extern volatile bool abort_program_;
 
 class NucleoL4RZI_DemoPlatform final
-	: public embvm::VirtualPlatformBase<NucleoL4RZI_DemoPlatform,
-										PlatformDriverRegistry>
+	: public embvm::VirtualPlatformBase<NucleoL4RZI_DemoPlatform, PlatformDriverRegistry>
 {
 	using PlatformBase =
-		embvm::VirtualPlatformBase<NucleoL4RZI_DemoPlatform,
-								   PlatformDriverRegistry>;
+		embvm::VirtualPlatformBase<NucleoL4RZI_DemoPlatform, PlatformDriverRegistry>;
 
   public:
-  	// APIs to required by base class
+	// APIs to required by base class
 	static void earlyInitHook_() noexcept;
 	static void initOS_() noexcept;
 	void init_() noexcept;

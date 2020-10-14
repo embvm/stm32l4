@@ -2,12 +2,13 @@
 #define STM32_GPIO_DRIVER_HPP_
 
 #include "helpers/gpio_helper.hpp"
-#include <driver/gpio.hpp>
 #include <cstdint>
+#include <driver/gpio.hpp>
 
 // TODO: namespace as stm32/stm32l4, and remove this prefix on types. Much cleaner presentation.
 // TODO: apply same to nRF52
-enum STM32GPIOPort : uint8_t {
+enum STM32GPIOPort : uint8_t
+{
 	A = 0,
 	B,
 	C,
@@ -35,7 +36,7 @@ class STM32GPIOOutput final : public embvm::gpio::output
 	 *
 	 * @param name The name of the GPIO pin
 	 */
-	//explicit STM32GPIOOutput(const char* name) noexcept : embvm::gpio::output(name) {}
+	// explicit STM32GPIOOutput(const char* name) noexcept : embvm::gpio::output(name) {}
 
 	/// Default destructor
 	~STM32GPIOOutput() final = default;
@@ -53,9 +54,9 @@ class STM32GPIOOutput final : public embvm::gpio::output
 	}
 
 	void operator delete(void* p)
-    {
-        // TODO: remove when we solve deleting destructor issue in base class
-    }
+	{
+		// TODO: remove when we solve deleting destructor issue in base class
+	}
 
   private:
 	void start_() noexcept final
