@@ -54,17 +54,16 @@ Reset_Handler:
 
 /* Loop to copy data from read only memory to RAM.
  * The ranges of copy from/to are specified by following symbols:
- *      __etext: LMA of start of the section to copy from. Usually end of text
+ *      __data_start_in_flash: LMA of start of the section to copy from.
  *      __data_start__: VMA of start of the section to copy to.
- *      __bss_start__: VMA of end of the section to copy to. Normally __data_end__ is used, but by using __bss_start__
- *                    the user can add their own initialized data section before BSS section with the INSERT AFTER command.
+ *      __data_end__: VMA of end of the section to copy to.
  *
  * All addresses must be aligned to 4 bytes boundary.
  */
 #ifndef __STARTUP_SKIP_ETEXT
-    ldr r1, =__etext
+    ldr r1, =__data_start_in_flash
     ldr r2, =__data_start__
-    ldr r3, =__bss_start__
+    ldr r3, =__data_end__
 
     subs r3, r3, r2
     ble .L_loop1_done
