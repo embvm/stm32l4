@@ -39,7 +39,7 @@ class STM32GPIOOutput final : public embvm::gpio::output
 	// explicit STM32GPIOOutput(const char* name) noexcept : embvm::gpio::output(name) {}
 
 	/// Default destructor
-	~STM32GPIOOutput() final = default;
+	~STM32GPIOOutput() = default;
 
 	void set(bool v) noexcept final
 	{
@@ -51,11 +51,6 @@ class STM32GPIOOutput final : public embvm::gpio::output
 		{
 			STM32GPIOTranslator::clear(TPort, TPin);
 		}
-	}
-
-	void operator delete(void* p)
-	{
-		// TODO: remove when we solve deleting destructor issue in base class
 	}
 
   private:

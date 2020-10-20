@@ -139,7 +139,7 @@ class NucleoL4R5ZI_HWPlatform : public embvm::VirtualHwPlatformBase<NucleoL4R5ZI
 
   public:
 	/// @brief Default constructor.
-	NucleoL4R5ZI_HWPlatform() noexcept : HWPlatformBase("NUCLEO-L4R5ZI Development Board") {}
+	NucleoL4R5ZI_HWPlatform() noexcept;
 
 	/// @brief Default destructor.
 	~NucleoL4R5ZI_HWPlatform() noexcept;
@@ -160,9 +160,9 @@ class NucleoL4R5ZI_HWPlatform : public embvm::VirtualHwPlatformBase<NucleoL4R5ZI
 	// Expose any dependnecies or non-portable headers here!!!!
 	stm32l4r5 processor_;
 
-	STM32GPIOOutput<STM32GPIOPort::C, 7> led1_pin;
-	STM32GPIOOutput<STM32GPIOPort::B, 7> led2_pin;
-	STM32GPIOOutput<STM32GPIOPort::B, 14> led3_pin;
+	STM32GPIOOutput<STM32GPIOPort::C, 7> led1_pin{};
+	STM32GPIOOutput<STM32GPIOPort::B, 7> led2_pin{};
+	STM32GPIOOutput<STM32GPIOPort::B, 14> led3_pin{};
 
 	embvm::led::gpioActiveHigh led1{led1_pin, "led1"};
 	embvm::led::gpioActiveHigh led2{led2_pin, "led2"};

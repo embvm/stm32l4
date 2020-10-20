@@ -1,7 +1,11 @@
 #include "NucleoL4RZI_HWPlatform.hpp"
 
-// TODO: workaround - remove later
-void free(void* p) {}
+NucleoL4R5ZI_HWPlatform::NucleoL4R5ZI_HWPlatform() noexcept : HWPlatformBase("NUCLEO-L4R5ZI Development Board")
+{
+	registerDriver("led1", &led1);
+	registerDriver("led3", &led2);
+	registerDriver("led2", &led3);
+}
 
 NucleoL4R5ZI_HWPlatform::~NucleoL4R5ZI_HWPlatform() noexcept {}
 
