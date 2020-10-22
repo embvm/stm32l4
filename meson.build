@@ -132,6 +132,10 @@ subdir('src')
 # Tooling Modules #
 ###################
 
+clangformat_targets = [
+	meson.source_root() / 'src'
+]
+
 subdir('build/analysis/clang-tidy')
 subdir('build/analysis/complexity')
 subdir('build/analysis/cppcheck')
