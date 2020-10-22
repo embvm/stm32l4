@@ -13,7 +13,8 @@
 
 void _putchar(char c)
 {
-	// TODO:
+	(void)c;
+	// TODO: implement
 }
 
 namespace

@@ -1,6 +1,6 @@
 #include "NucleoL4RZI_HWPlatform.hpp"
 
-NucleoL4R5ZI_HWPlatform::NucleoL4R5ZI_HWPlatform() noexcept : HWPlatformBase("NUCLEO-L4R5ZI Development Board")
+NucleoL4R5ZI_HWPlatform::NucleoL4R5ZI_HWPlatform() noexcept
 {
 	registerDriver("led1", &led1);
 	registerDriver("led3", &led2);

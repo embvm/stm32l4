@@ -164,9 +164,9 @@ class NucleoL4R5ZI_HWPlatform : public embvm::VirtualHwPlatformBase<NucleoL4R5ZI
 	STM32GPIOOutput<STM32GPIOPort::B, 7> led2_pin{};
 	STM32GPIOOutput<STM32GPIOPort::B, 14> led3_pin{};
 
-	embvm::led::gpioActiveHigh led1{led1_pin, "led1"};
-	embvm::led::gpioActiveHigh led2{led2_pin, "led2"};
-	embvm::led::gpioActiveHigh led3{led3_pin, "led3"};
+	embvm::led::gpioActiveHigh led1{led1_pin};
+	embvm::led::gpioActiveHigh led2{led2_pin};
+	embvm::led::gpioActiveHigh led3{led3_pin};
 };
 
 #endif // NUCLEO_L4R5ZI_HW_PLATFORM_HPP_

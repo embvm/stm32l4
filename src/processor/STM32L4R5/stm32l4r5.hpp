@@ -10,7 +10,7 @@ class stm32l4r5 : public embvm::VirtualProcessorBase<stm32l4r5>
 
   public:
 	/// @brief Default constructor.
-	stm32l4r5() noexcept : ProcessorBase("nrF52840") {}
+	stm32l4r5() noexcept = default;
 
 	/// @brief Default destructor.
 	~stm32l4r5();

@@ -33,8 +33,8 @@ class NucleoL4RZI_DemoPlatform final
 	void startBlink() noexcept;
 
 	// Constructor/destructor
-	NucleoL4RZI_DemoPlatform() noexcept : PlatformBase("Nucleo-L4R5ZI Demo Platform") {}
-	~NucleoL4RZI_DemoPlatform() = default;
+	NucleoL4RZI_DemoPlatform() noexcept {}
+	~NucleoL4RZI_DemoPlatform() noexcept = default;
 
   private:
 	NucleoL4R5ZI_HWPlatform hw_platform_;

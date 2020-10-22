@@ -30,7 +30,7 @@ class STM32GPIOOutput final : public embvm::gpio::output
   public:
 	/** Construct a generic GPIO output
 	 */
-	explicit STM32GPIOOutput() noexcept : embvm::gpio::output("nRF GPIO Output") {}
+	explicit STM32GPIOOutput() noexcept = default;
 
 	/** Construct a named GPIO output
 	 *
