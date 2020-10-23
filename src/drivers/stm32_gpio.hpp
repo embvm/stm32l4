@@ -5,43 +5,21 @@
 #include <cstdint>
 #include <driver/gpio.hpp>
 
-// TODO: namespace as stm32/stm32l4, and remove this prefix on types. Much cleaner presentation.
-// TODO: apply same to nRF52
-enum STM32GPIOPort : uint8_t
-{
-	A = 0,
-	B,
-	C,
-	D,
-	E,
-	F,
-	G,
-	H,
-	I,
-};
-
-// TODO: should these be inline functions?
 // TODO: is there a way to handle the translatoin between TPort and the actual STM32 pointer
 // just once, instead of doing it every time we make a call?
 // Constexpr function called during construction, somehow?
-template<STM32GPIOPort TPort, uint8_t TPin>
+template<embvm::gpio::port TPort, uint8_t TPin>
 class STM32GPIOOutput final : public embvm::gpio::output
 {
   public:
 	/** Construct a generic GPIO output
 	 */
-	explicit STM32GPIOOutput() noexcept = default;
-
-	/** Construct a named GPIO output
-	 *
-	 * @param name The name of the GPIO pin
-	 */
-	// explicit STM32GPIOOutput(const char* name) noexcept : embvm::gpio::output(name) {}
+	STM32GPIOOutput() noexcept = default;
 
 	/// Default destructor
 	~STM32GPIOOutput() = default;
 
-	void set(bool v) noexcept final
+	inline void set(bool v) noexcept final
 	{
 		if(v)
 		{
@@ -54,12 +32,12 @@ class STM32GPIOOutput final : public embvm::gpio::output
 	}
 
   private:
-	void start_() noexcept final
+	inline void start_() noexcept final
 	{
 		STM32GPIOTranslator::configure_output(TPort, TPin);
 	}
 
-	void stop_() noexcept final
+	inline void stop_() noexcept final
 	{
 		STM32GPIOTranslator::configure_default(TPort, TPin);
 	}
