@@ -38,34 +38,17 @@
  */
 #define PIN_INT_TO_STM32(x) (1U << x)
 
+// TODO: how do we abstract this for general stm32 types?
+// Maybe we have an include for each processor that defines values such as this, the RCC clock bits,
+// etc.? This is important at least for the GPIO banks, because the differne tprocessor families
+// have different bank counts.
 constexpr std::array<GPIO_TypeDef*, 9> ports = {GPIOA, GPIOB, GPIOC, GPIOD, GPIOE,
 												GPIOF, GPIOG, GPIOH, GPIOI};
-
-#define __HAL_RCC_GPIOB_CLK_ENABLE()                          \
-	do                                                        \
-	{                                                         \
-		__IO uint32_t tmpreg;                                 \
-		SET_BIT(RCC->AHB2ENR, RCC_AHB2ENR_GPIOBEN);           \
-		/* Delay after an RCC peripheral clock enabling */    \
-		tmpreg = READ_BIT(RCC->AHB2ENR, RCC_AHB2ENR_GPIOBEN); \
-	} while(0)
-
-#define __HAL_RCC_GPIOC_CLK_ENABLE()                          \
-	do                                                        \
-	{                                                         \
-		__IO uint32_t tmpreg;                                 \
-		SET_BIT(RCC->AHB2ENR, RCC_AHB2ENR_GPIOCEN);           \
-		/* Delay after an RCC peripheral clock enabling */    \
-		tmpreg = READ_BIT(RCC->AHB2ENR, RCC_AHB2ENR_GPIOCEN); \
-	} while(0)
 
 #pragma mark - Implementations -
 
 void STM32GPIOTranslator::configure_output(uint8_t port, uint8_t pin) noexcept
 {
-	__HAL_RCC_GPIOB_CLK_ENABLE();
-	__HAL_RCC_GPIOC_CLK_ENABLE();
-
 	LL_GPIO_InitTypeDef gpio_init = {.Pin = PIN_INT_TO_STM32(pin),
 									 .Mode = LL_GPIO_MODE_OUTPUT,
 									 .Speed = LL_GPIO_SPEED_FREQ_MEDIUM,

@@ -1,4 +1,5 @@
 #include "NucleoL4RZI_HWPlatform.hpp"
+#include <stm32_rcc.hpp>
 
 NucleoL4R5ZI_HWPlatform::NucleoL4R5ZI_HWPlatform() noexcept
 {
@@ -13,6 +14,10 @@ void NucleoL4R5ZI_HWPlatform::earlyInitHook_() noexcept {}
 
 void NucleoL4R5ZI_HWPlatform::init_() noexcept
 {
+	// We need to turn on the GPIO clocks before we start the gpio/led drivers.
+	STM32ClockControl::gpioEnable(embvm::gpio::port::B);
+	STM32ClockControl::gpioEnable(embvm::gpio::port::C);
+
 	// start all LEDs
 	// turn them off? Or just trust that they start off?
 	led1.start();
