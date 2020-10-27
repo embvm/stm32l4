@@ -1,4 +1,5 @@
 #include "stm32_rcc.hpp"
+#include <volatile/volatile.hpp>
 #include <array>
 #include <processor_includes.hpp>
 
@@ -9,10 +10,14 @@ constexpr std::array<unsigned, 9> gpio_enable_bits = {
 
 void STM32ClockControl::gpioEnable(embvm::gpio::port port) noexcept
 {
-	SET_BIT(RCC->AHB2ENR, gpio_enable_bits[port]);
+	uint32_t val = embutil::volatile_load(&RCC->AHB2ENR);
+	val |= gpio_enable_bits[port];
+	embutil::volatile_store(&RCC->AHB2ENR, val);
 }
 
 void STM32ClockControl::gpioDisable(embvm::gpio::port port) noexcept
 {
-	CLEAR_BIT(RCC->AHB2ENR, gpio_enable_bits[port]);
+	uint32_t val = embutil::volatile_load(&RCC->AHB2ENR);
+	val &= ~(gpio_enable_bits[port]);
+	embutil::volatile_store(&RCC->AHB2ENR, val);
 }
