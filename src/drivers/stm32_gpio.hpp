@@ -5,7 +5,9 @@
 #include <cstdint>
 #include <driver/gpio.hpp>
 
-// TODO: support for special function pints
+// TODO: support for special function pins
+// TODO: support for slew rate
+// TODO: support for internal pull up/down resistors
 
 // TODO: is there a way to handle the translatoin between TPort and the actual STM32 pointer
 // just once, instead of doing it every time we make a call?
