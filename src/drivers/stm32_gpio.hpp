@@ -60,8 +60,6 @@ class STM32GPIO final : public embvm::gpio::base
 			case embvm::gpio::mode::output:
 				STM32GPIOTranslator::configure_output(TPort, TPin);
 				break;
-			case embvm::gpio::mode::inout:
-				// Currently unsupported mode
 			case embvm::gpio::mode::special:
 				// Currently unsupported mode
 			case embvm::gpio::mode::MAX_MODE:
