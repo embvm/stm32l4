@@ -88,3 +88,13 @@ void STM32GPIOTranslator::clear(uint8_t port, uint8_t pin) noexcept
 {
 	LL_GPIO_ResetOutputPin(ports[port], PIN_INT_TO_STM32(pin)); // GPIOx, PinMask
 }
+
+void STM32GPIOTranslator::toggle(uint8_t port, uint8_t pin) noexcept
+{
+	LL_GPIO_TogglePin(ports[port], PIN_INT_TO_STM32(pin));
+}
+
+bool STM32GPIOTranslator::get(uint8_t port, uint8_t pin) noexcept
+{
+	return static_cast<bool>(LL_GPIO_IsInputPinSet(ports[port], PIN_INT_TO_STM32(pin)));
+}

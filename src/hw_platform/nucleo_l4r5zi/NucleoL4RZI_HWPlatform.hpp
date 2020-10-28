@@ -160,9 +160,9 @@ class NucleoL4R5ZI_HWPlatform : public embvm::VirtualHwPlatformBase<NucleoL4R5ZI
 	// Expose any dependnecies or non-portable headers here!!!!
 	stm32l4r5 processor_;
 
-	STM32GPIOOutput<embvm::gpio::port::C, 7> led1_pin{};
-	STM32GPIOOutput<embvm::gpio::port::B, 7> led2_pin{};
-	STM32GPIOOutput<embvm::gpio::port::B, 14> led3_pin{};
+	STM32GPIO<embvm::gpio::port::C, 7> led1_pin{embvm::gpio::mode::output};
+	STM32GPIO<embvm::gpio::port::B, 7> led2_pin{embvm::gpio::mode::output};
+	STM32GPIO<embvm::gpio::port::B, 14> led3_pin{embvm::gpio::mode::output};
 
 	embvm::led::gpioActiveHigh led1{led1_pin};
 	embvm::led::gpioActiveHigh led2{led2_pin};
