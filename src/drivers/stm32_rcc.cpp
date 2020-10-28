@@ -1,7 +1,7 @@
 #include "stm32_rcc.hpp"
-#include <volatile/volatile.hpp>
 #include <array>
 #include <processor_includes.hpp>
+#include <volatile/volatile.hpp>
 
 constexpr std::array<unsigned, 9> gpio_enable_bits = {
 	RCC_AHB2ENR_GPIOAEN, RCC_AHB2ENR_GPIOBEN, RCC_AHB2ENR_GPIOCEN,
