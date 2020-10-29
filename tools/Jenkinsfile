@@ -28,6 +28,9 @@ pipeline
 
 				echo 'Removing existing build results'
 				sh 'make distclean'
+				echo 'Updating subprojects'
+				sh 'meson subprojects download'
+				sh 'meson subprojects update'
 			}
 		}
 		stage('Build for Clang')
