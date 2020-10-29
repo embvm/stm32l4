@@ -4,6 +4,7 @@
 #include <driver/led.hpp>
 #include <hw_platform/virtual_hw_platform.hpp>
 #include <stm32_gpio.hpp>
+#include <stm32_timer.hpp>
 #include <stm32l4r5.hpp>
 
 #if 0
@@ -167,6 +168,8 @@ class NucleoL4R5ZI_HWPlatform : public embvm::VirtualHwPlatformBase<NucleoL4R5ZI
 	embvm::led::gpioActiveHigh led1{led1_pin};
 	embvm::led::gpioActiveHigh led2{led2_pin};
 	embvm::led::gpioActiveHigh led3{led3_pin};
+
+	STM32Timer timer0{embvm::timer::channel::CH2, std::chrono::seconds(1)};
 };
 
 #endif // NUCLEO_L4R5ZI_HW_PLATFORM_HPP_
