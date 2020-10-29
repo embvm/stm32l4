@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <driver/gpio.hpp>
+#include <driver/timer.hpp>
 
 /** Translation class which handles STM32 RCC Interactions.
  *
@@ -31,6 +32,24 @@ class STM32ClockControl
 	 * @param [in] port The GPIO port to disable.
 	 */
 	static void gpioDisable(embvm::gpio::port port) noexcept;
+
+	/** Enable the peripheral clock to one of the timer devices.
+	 *
+	 * @precondition timer is a valid channel for the STM32 processor.
+	 * @postcondition Timer peripheral clock is enabled.
+	 *
+	 * @param [in] timer The timer device to enable.
+	 */
+	static void timerEnable(embvm::timer::channel timer) noexcept;
+
+	/** Disable the peripheral clock to one of the timer devices..
+	 *
+	 * @precondition timer is a valid channel for the STM32 processor.
+	 * @postcondition Timer peripheral clock is disabled.
+	 *
+	 * @param [in] timer The timer device to disable.
+	 */
+	static void timerDisable(embvm::timer::channel timer) noexcept;
 
   private:
 	/// This class can't be instantiated
