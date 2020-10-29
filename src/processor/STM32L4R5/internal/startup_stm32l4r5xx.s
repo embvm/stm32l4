@@ -56,14 +56,16 @@ Reset_Handler:
  * The ranges of copy from/to are specified by following symbols:
  *      __data_start_in_flash: LMA of start of the section to copy from.
  *      __data_start__: VMA of start of the section to copy to.
- *      __data_end__: VMA of end of the section to copy to.
+ *      __bss_start__: VMA of end of the section to copy to; we go from __data_start__
+ *			to __bss_start__ because the linker may end up loading values from flash
+ *			between these two sections, such as the global offset table.
  *
  * All addresses must be aligned to 4 bytes boundary.
  */
 #ifndef __STARTUP_SKIP_ETEXT
     ldr r1, =__data_start_in_flash
     ldr r2, =__data_start__
-    ldr r3, =__data_end__
+    ldr r3, =__bss_start__
 
     subs r3, r3, r2
     ble .L_loop1_done
