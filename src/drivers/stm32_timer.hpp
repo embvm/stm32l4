@@ -72,7 +72,19 @@ class STM32Timer final : public embvm::timer::Timer //, public embvm::HALDriverB
 	void disableInterrupts() noexcept /*final*/;
 
   private:
+	/// Start the timer
+	/// @precondition The timer is stopped
+	/// @postcondition The RCC clock to the timer is enabled
+	/// @postcondition The timer peripheral is configured using the stored period_
+	/// 	and enabled.
+	/// @postcondition Timer channel interrupt is enabled.
 	void start_() noexcept final;
+
+	/// Stop the timer
+	/// @precondition The timer is started
+	/// @postcondition The timer RCC clock is disabled
+	/// @postcondition The timer peripheral is disabled
+	/// @postcondition Timer channel interrupt is disabled
 	void stop_() noexcept final;
 
   private:
