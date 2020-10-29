@@ -1,10 +1,8 @@
-# Project Title
+# Embedded Virtual Machine STM32L4 Support
 
-Provide an introductory paragraph, describing:
+This repository provides Embedded VM ecosystem support for SMT32L4 processors.
 
-* What your project does
-* Why people should consider using your project
-* Link to project home page
+Note that this project is dual-licensed. The open-source version of this project is released under GPLv3. [A commercial license](https://embeddedartistry.com/product/embedded-virtual-machine-commercial-license), which provides holders with the ability to create and distribute software without open-source obligations, can be purchased in the [Embedded Artistry store](https://embeddedartistry.com/store).
 
 ## Table of Contents
 
@@ -16,9 +14,7 @@ Provide an introductory paragraph, describing:
         1. [Meson Build System](#meson-build-system)
     2. [Getting the Source](#getting-the-source)
     3. [Building](#building)
-        1. [Enabling Link-time Optimization](#enabling-link-time-optimization)
-    4. [Installation](#installation)
-    5. [Usage](#usage)
+    4. [Testing](#testing)
 4. [Configuration Options](#configuration-options)
 5. [Documentation](#documentation)
 6. [Need Help?](#need-help)
@@ -26,29 +22,24 @@ Provide an introductory paragraph, describing:
 8. [Further Reading](#further-reading)
 9. [Authors](#authors)
 10. [License](#license)
-11. [Acknowledgments](#acknowledgements)
 
 # About the Project
 
-Here you can provide more details about the project
-* What features does your project provide?
-* Short motivation for the project? (Don't be too long winded)
-* Links to the project site
-
-```
-Show some example code to describe what your project does
-Show some of your APIs
-```
+This repository provides support for SMT32L4 processors. Currently, the implementation wraps the STM32 LL HAL library with Embedded VM compatible interfaces.
 
 **[Back to top](#table-of-contents)**
 
 # Project Status
 
-Describe the current release and any notes about the current state of the project. Examples: currently compiles on your host machine, but is not cross-compiling for ARM, APIs are not set, feature not implemented, etc.
+This module is a work-in-progress. Initial support for the STM32L4R5 processor family is enabled. Only a minimal number of drivers are supported. We will be expanding driver and processor support over the coming months.
+
+Please file an issue if you need particular support, and we will get to it ASAP.
 
 **[Back to top](#table-of-contents)**
 
 ## Getting Started
+
+If you are unfamiliar with the Embedded VM project, please see the [`embvm-core`](https://github.com/embvm/embvm-core/) repository for more information and a [Getting Started guide](https://github.com/embvm/embvm-core/tree/master/docs/UsingTheFramework/getting_started.m).
 
 ### Requirements
 
@@ -120,20 +111,20 @@ This project uses [`git-lfs`](https://git-lfs.github.com), so please install it 
 This project is hosted on GitHub. You can clone the project directly using this command:
 
 ```
-git clone --recursive git@github.com:embeddedartistry/project-skeleton.git
+git clone --recursive https://github.com/embvm/embvm-core
 ```
 
 If you don't clone recursively, be sure to run the following command in the repository or your build will fail:
 
 ```
-git submodule update --init
+git submodule update --init --recursive
 ```
 
 **[Back to top](#table-of-contents)**
 
 ### Building
 
-If Make is installed, the library can be built by issuing the following command:
+If Make is installed, the project can be built by issuing the following command:
 
 ```
 make
@@ -169,90 +160,41 @@ ninja -C buildresults
 
 Cross-compilation is handled using `meson` cross files. Example files are included in the [`build/cross`](build/cross/) folder. You can write your own cross files for your specific processor by defining the toolchain, compilation flags, and linker flags. These settings will be used to compile the project.
 
-Cross-compilation must be configured using the meson command when creating the build output folder. For example:
+Cross-compilation must be configured using the meson command when creating the build output folder. For files stored within `build/cross`, we provide a Makefile `CROSS` to simplify the process. This variable will automatically supply the proper Meson argument, `build/cross/` prefix, and `.txt` filename extension.
+
+You can use a single file, or you can layer multiple files by separating the names with a colon.
 
 ```
-meson buildresults --cross-file build/cross/gcc_arm_cortex-m4.txt
+make CROSS=arm:cortex-m4_hardfloat
 ```
 
-Following that, you can run `make` (at the project root) or `ninja` to build the project.
-
-Tests will not be cross-compiled. They will only be built for the native platform.
-
-**Full instructions for building the project, using alternate toolchains, and running supporting tooling are documented in [Embedded Artistry's Standardized Meson Build System](https://embeddedartistry.com/fieldatlas/embedded-artistrys-standardized-meson-build-system/) on our website.**
-
-**[Back to top](#table-of-contents)**
-
-### Enabling Link-time Optimization
-
-Link-time Optimization (LTO) can be enabled during the meson configuration stage by setting the built-in option `b_lto` to `true`:
+You can also do this manually with the Meson interface. Note, however, that you will need to include a special `--cross-file=build/cross/embvm.txt` cross file to ensure that the required Embedded VM settings are applied.
 
 ```
-meson buildresults -Db_lto=true
+meson buildresults --cross-file build/cross/arm.txt --cross-file build/cross/cortex-m4_hardfloat.txt --cross-file=build/cross/embvm.txt
 ```
 
-This can be combined with other build options.
+Following that, you can run `make` (at the project root) or `ninja -C buildresults` to build the project.
 
-**[Back to top](#table-of-contents)**
+> **Note:** Tests will not be cross-compiled. They will only be built for the native platform.
 
-### Testing
-
-The tests for this library are written with CMocka, which is included as a subproject and does not need to be installed on your system. You can run the tests by issuing the following command:
-
-```
-make test
-```
-
-By default, test results are generated for use by the CI server and are formatted in JUnit XML. The test results XML files can be found in `buildresults/test/`.
+**Full instructions for working with the build system, including topics like using alternate toolchains and running supporting tooling, are documented in [Embedded Artistry's Standardized Meson Build System](https://embeddedartistry.com/fieldatlas/embedded-artistrys-standardized-meson-build-system/) on our website.**
 
 **[Back to top](#table-of-contents)**
 
 ## Configuration Options
 
-The following meson project options can be set for this library when creating the build results directory with `meson`, or by using `meson configure`:
-
-* `disable-builtins` will tell the compiler not to generate built-in function
-* `disable-stack-protection` will tell the compiler not to insert stack protection calls
-* `disable-rtti` will disable RTTI for C++ projects
-* `disable-exceptions` will disable exceptions for C++ projects
-* `enable-threading` can be used to control threaded targets and libc++ threading support
-* `enable-pedantic`: Turn on `pedantic` warnings
-* `enable-pedantic-error`: Turn on `pedantic` warnings and errors
-* `hide-unimplemented-libc-apis`: Hides the header definitions for functions which are not actually implemented
-* `enable-gnu-extensions` will enable GNU libc extensions that are implemented in this library
-
-The following options can be used to configure `libc++` if used with this project:
-
-* `libcxx-use-compiler-rt`
-* `libcxx-use-llvm-libunwind`
-* `libcxx-thread-library`
-* `libcxx-has-external-thread-api`
-* `libcxx-build-external-thread-api`
-* `libcxx-enable-chrono`
-* `libcxx-enable-filesystem`
-* `libcxx-enable-stdinout`
-* `libcxx-default-newdelete`
-* `libcxx-silent-terminate`
-* `libcxx-monotonic-clock`
-
-Options can be specified using `-D` and the option name:
-
-```
-meson buildresults -Ddisable-builtins=false
-```
-
-The same style works with `meson configure`:
-
-```
-cd buildresults
-meson configure -Ddisable-builtins=false
-```
+Build configuration is covered in depth in the [Configuration and Tuning](https://github.com/embvm/embvm-core/tree/master/docs/UsingTheFramework/configuration_and_tuning.md) guide in the [`embvm-core`](https://github.com/embvm/embvm-core) project.
 
 **[Back to top](#table-of-contents)**
 
 ## Documentation
 
-Documentation can be built locally by running the following command:
+The bulk of the Embedded VM documentation is contained in the [`embvm-core` repository](https://github.com/embvm/embvm-core). This repository only contains documentation relevant to this specific module.
+
+### Building the Documentation
+
+Full documentation can be built locally by running the following command:
 
 ```
 make docs
@@ -280,13 +222,9 @@ If you are interested in contributing to this project, please read our [contribu
 
 Copyright © 2020 Embedded Artistry LLC
 
-See the [LICENSE](LICENSE) file for licensing details.
+Note that this project is dual-licensed. The open-source version of this project is released under GPLv3. [A commercial license](https://embeddedartistry.com/product/embedded-virtual-machine-commercial-license), which provides holders with the ability to create and distribute software without open-source obligations, can be purchased in the [Embedded Artistry store](https://embeddedartistry.com/store).
 
-For other open-source licenses, please see the [Software Inventory](docs/software_inventory.xlsx).
-
-## Acknowledgments
-
-Make any public acknowledgments here
+See the [LICENSE](LICENSE) file for further licensing details.
 
 **[Back to top](#table-of-contents)**
 
