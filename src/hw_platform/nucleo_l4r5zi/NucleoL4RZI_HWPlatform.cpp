@@ -6,6 +6,7 @@ NucleoL4R5ZI_HWPlatform::NucleoL4R5ZI_HWPlatform() noexcept
 	registerDriver("led1", &led1);
 	registerDriver("led3", &led2);
 	registerDriver("led2", &led3);
+	registerDriver("timer0", &timer0);
 }
 
 NucleoL4R5ZI_HWPlatform::~NucleoL4R5ZI_HWPlatform() noexcept {}
@@ -23,6 +24,12 @@ void NucleoL4R5ZI_HWPlatform::init_() noexcept
 	led1.start();
 	led2.start();
 	led3.start();
+
+	timer0.registerCallback([this]() noexcept {
+		led1.toggle();
+		led2.toggle();
+		led3.toggle();
+	});
 }
 
 void NucleoL4R5ZI_HWPlatform::leds_off() noexcept
@@ -52,6 +59,8 @@ void NucleoL4R5ZI_HWPlatform::initProcessor_() noexcept
 void NucleoL4R5ZI_HWPlatform::startBlink() noexcept
 {
 	led1.on();
-	led2.on();
+	led2.off();
 	led3.on();
+
+	timer0.start();
 }
