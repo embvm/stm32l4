@@ -18,6 +18,7 @@ class STM32GPIOTranslator
   public:
 	static void configure_output(uint8_t port, uint8_t pin) noexcept;
 	static void configure_input(uint8_t port, uint8_t pin, uint8_t pull_config) noexcept;
+	static void configure_alternate_i2c(uint8_t port, uint8_t pin, uint8_t alt_func) noexcept;
 	static void configure_default(uint8_t port, uint8_t pin) noexcept;
 
 	// Output Functions

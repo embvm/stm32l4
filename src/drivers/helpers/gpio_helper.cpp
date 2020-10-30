@@ -59,6 +59,7 @@ void STM32GPIOTranslator::configure_output(uint8_t port, uint8_t pin) noexcept
 	LL_GPIO_Init(ports[port], &gpio_init); // GPIOx, GPIO_InitStruct
 }
 
+// TODO: address pull-up setting
 void STM32GPIOTranslator::configure_input(uint8_t port, uint8_t pin,
 										  [[maybe_unused]] uint8_t pull_config) noexcept
 {
@@ -69,6 +70,22 @@ void STM32GPIOTranslator::configure_input(uint8_t port, uint8_t pin,
 		.OutputType = LL_GPIO_OUTPUT_PUSHPULL,
 		.Pull = LL_GPIO_PULL_NO,
 		.Alternate = LL_GPIO_AF_0,
+	};
+
+	LL_GPIO_Init(ports[port], &gpio_init); // GPIOx, GPIO_InitStruct
+}
+
+// TODO: add a method for configuring pullup setting
+void STM32GPIOTranslator::configure_alternate_i2c(uint8_t port, uint8_t pin,
+												  uint8_t alt_func) noexcept
+{
+	LL_GPIO_InitTypeDef gpio_init = {
+		.Pin = PIN_INT_TO_STM32(pin),
+		.Mode = LL_GPIO_MODE_ALTERNATE,
+		.Speed = LL_GPIO_SPEED_FREQ_HIGH,
+		.OutputType = LL_GPIO_OUTPUT_OPENDRAIN,
+		.Pull = LL_GPIO_PULL_UP,
+		.Alternate = alt_func,
 	};
 
 	LL_GPIO_Init(ports[port], &gpio_init); // GPIOx, GPIO_InitStruct
