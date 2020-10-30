@@ -17,6 +17,7 @@
 // Is that just a processor-level API somehow?
 // TODO: we can convert this to being compile-time setting of the period/clock,
 // which we can use for constexpr calculations. We'll need a helper class probably.
+// TODO: support one-shot timers
 
 /** STM32 Timer Driver Implementation
  *
