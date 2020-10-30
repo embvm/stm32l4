@@ -38,6 +38,9 @@ class STM32DMA final : public embvm::DriverBase
 	}
 	~STM32DMA() = default;
 
+	void enableInterrupts() noexcept;
+	void disableInterrupts() noexcept;
+
   private:
 	// Driver base functions
 	void start_() noexcept final;

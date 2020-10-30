@@ -1,6 +1,7 @@
 #include "stm32_dma.hpp"
 #include <array>
 #include <cassert>
+#include <nvic.hpp>
 #include <stm32l4xx_ll_dma.h>
 
 #pragma mark - Variables -
@@ -13,6 +14,17 @@ static std::array<uint32_t const, STM32DMA::channel::MAX_CH> transfer_complete_f
 static std::array<uint32_t const, STM32DMA::channel::MAX_CH> transfer_error_flags = {
 	DMA_ISR_TEIF1, DMA_ISR_TEIF2, DMA_ISR_TEIF3, DMA_ISR_TEIF4,
 	DMA_ISR_TEIF5, DMA_ISR_TEIF6, DMA_ISR_TEIF7};
+
+constexpr std::array<std::array<unsigned, STM32DMA::channel::MAX_CH>, 2> irq_num = {
+	std::array<unsigned, STM32DMA::channel::MAX_CH>{
+		DMA1_Channel1_IRQn, DMA1_Channel2_IRQn, DMA1_Channel3_IRQn, DMA1_Channel4_IRQn,
+		DMA1_Channel5_IRQn, DMA1_Channel6_IRQn, DMA1_Channel7_IRQn},
+	std::array<unsigned, STM32DMA::channel::MAX_CH>{
+		DMA2_Channel1_IRQn, DMA2_Channel2_IRQn, DMA2_Channel3_IRQn, DMA2_Channel4_IRQn,
+		DMA2_Channel5_IRQn, DMA2_Channel6_IRQn, DMA2_Channel7_IRQn},
+};
+
+#pragma mark - Helper Functions -
 
 static inline bool check_dma_complete_flag(STM32DMA::device dev, STM32DMA::channel ch)
 {
@@ -131,12 +143,11 @@ void DMA2_Channel7_IRQHandler()
 
 #pragma mark - Driver -
 
-void STM32DMA::start_() noexcept {}
-
-void STM32DMA::stop_() noexcept {}
+void STM32DMA::start_() noexcept
+{
+	enableInterrupts();
 
 #if 0
-
 /**
   * @brief  This function configures the DMA Channels for I2C3(TXDR) and I2C3(RXDR).
   * @note   This function is used to :
@@ -150,13 +161,6 @@ void STM32DMA::stop_() noexcept {}
   */
 void Configure_DMA(void)
 {
-
-  /* (2) Configure NVIC for DMA1_Channel2 and DMA1_Channel3 */
-  NVIC_SetPriority(DMA1_Channel2_IRQn, 0x4);
-  NVIC_EnableIRQ(DMA1_Channel2_IRQn);
-  NVIC_SetPriority(DMA1_Channel3_IRQn, 0x1);
-  NVIC_EnableIRQ(DMA1_Channel3_IRQn);
-
   /* (3) Configure the DMA functional parameters for Master Transmit */
   LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_2, LL_DMA_DIRECTION_MEMORY_TO_PERIPH | \
                                                 LL_DMA_PRIORITY_HIGH              | \
@@ -178,12 +182,44 @@ void Configure_DMA(void)
                                                 LL_DMA_MDATAALIGN_BYTE);
   LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3, (uint32_t)LL_I2C_DMA_GetRegAddr(I2C3, LL_I2C_DMA_REG_DATA_RECEIVE), (uint32_t)&(aMasterReceiveBuffer), LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_3));
   LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_3, LL_DMA_REQUEST_3);
+}
+#endif
+}
 
+void STM32DMA::stop_() noexcept
+{
+	disableInterrupts();
+}
+
+void STM32DMA::enableInterrupts() noexcept
+{
+	auto irq = irq_num[device_][channel_];
+	assert(irq); // Check that channel is supported
+	NVICControl::priority(irq, 4); // TODO: how to configure priority for the driver?
+	NVICControl::enable(irq);
+
+	// TODO:
+#if 0
   /* (5) Enable DMA1 interrupts complete/error */
   LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_2);
   LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_2);
   LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
   LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_3);
+#endif
 }
 
+void STM32DMA::disableInterrupts() noexcept
+{
+	auto irq = irq_num[device_][channel_];
+	assert(irq); // Check that channel is supported
+	NVICControl::disable(irq);
+
+	// TODO: - disable
+#if 0
+  /* (5) Enable DMA1 interrupts complete/error */
+  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_2);
+  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_2);
+  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
+  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_3);
 #endif
+}
