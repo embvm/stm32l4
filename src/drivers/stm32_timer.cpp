@@ -171,6 +171,7 @@ void STM32Timer::start_() noexcept
 	/* Enable the capture/compare interrupt for channel*/
 	LL_TIM_EnableIT_CC1(timer_instance[channel_]);
 	// TODO: how to properly set this corresponding to channel above?
+	// Maybe we use the same idea as the DMA driver
 
 	/**********************************/
 	/* Start output signal generation */
@@ -208,13 +209,15 @@ void STM32Timer::stop_() noexcept
 
 void STM32Timer::enableInterrupts() noexcept
 {
-	assert(irq_num[channel_]); // Check that channel is supported
-	NVICControl::priority(irq_num[channel_], 0); // TODO: how to configure priority for the driver?
-	NVICControl::enable(irq_num[channel_]);
+	auto inst = irq_num[channel_];
+	assert(inst); // Check that channel is supported
+	NVICControl::priority(inst, 0); // TODO: how to configure priority for the driver?
+	NVICControl::enable(inst);
 }
 
 void STM32Timer::disableInterrupts() noexcept
 {
-	assert(irq_num[channel_]); // Check that channel is supported
-	NVICControl::disable(irq_num[channel_]);
+	auto inst = irq_num[channel_];
+	assert(inst); // Check that channel is supported
+	NVICControl::disable(inst);
 }
