@@ -31,6 +31,8 @@ void NucleoL4R5ZI_HWPlatform::init_() noexcept
 		led2.toggle();
 		led3.toggle();
 	});
+
+	i2c2.start();
 }
 
 void NucleoL4R5ZI_HWPlatform::leds_off() noexcept
