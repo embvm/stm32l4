@@ -11,6 +11,29 @@
 // into the processor layer? This would help us keep drivers common.
 // One thought is taking the config-table approach that Beningo uses in his drivers.
 // Then we can make defs public, and keep the impl. private, accessing them through pointers.
+// TODO: DMA support
+
+/* Useful Developer Notes
+ *
+ * Working in start/stop mode:
+ *   In order to start a transfer in Master mode, I2C Control Register 2 must be written with the
+ *   Start condition request, the slave address, the transfer direction, the number of bytes to be
+ *   transferred, and the End of Transfer mode. End of Transfer mode is configured by the AUTOEND
+ *   bit. If it is set, the Stop condition is automatically sent after the programmed number of
+ *   bytes is transferred.
+ *
+ *   If the AUTOEND bit is not set, the end of transfer is managed by software. After the programmed
+ *   number of bytes is transferred, the Transfer Complete (TC) flag is set and an interrupt is
+ *   generated, if enabled. Then a Repeated Start or a Stop condition can be requested by
+ *   software.
+ *
+ *   The data transfer can be managed by interrupts or by the DMA.
+ *
+ *   For payloads > 255: the Reload bit must be set in I2C_CR2
+ *   No reload == NBYTES data transferred, followed by STOP or RESTART
+ *   Reload == NBYTES is reloaded after NBYTES of data is transfered; data transfer will resume
+ *     Interrupt is generated if enabled, and TCR flag is set.
+ */
 
 struct STM32_I2C_Pins_t
 {
@@ -96,8 +119,35 @@ constexpr std::array<uint8_t, 4> error_irq_num = {I2C1_ER_IRQn, I2C2_ER_IRQn, I2
   */
 #define I2C_TIMING 0x00F02B86
 
+Maybe we provide a way to make this configurable, ALA table, allowing users to modify it
+to fit their needs
+Would then come from the hardware platform.
+
 Zephyr approach
-/* No preset timing was provided, let's dynamically configure */
+int stm32_i2c_configure_timing(const struct device *dev, uint32_t clock)
+{
+  const struct i2c_stm32_config *cfg = DEV_CFG(dev);
+  struct i2c_stm32_data *data = DEV_DATA(dev);
+  I2C_TypeDef *i2c = cfg->i2c;
+  uint32_t i2c_hold_time_min, i2c_setup_time_min;
+  uint32_t i2c_h_min_time, i2c_l_min_time;
+  uint32_t presc = 1U;
+  uint32_t timing = 0U;
+
+  /*  Look for an adequate preset timing value */
+  for (uint32_t i = 0; i < cfg->n_timings; i++) {
+    const struct i2c_config_timing *preset = &cfg->timings[i];
+    uint32_t speed = i2c_map_dt_bitrate(preset->i2c_speed);
+
+    if ((I2C_SPEED_GET(speed) == I2C_SPEED_GET(data->dev_config))
+       && (preset->periph_clock == clock)) {
+      /*  Found a matching periph clock and i2c speed */
+      LL_I2C_SetTiming(i2c, preset->timing_setting);
+      return 0;
+    }
+  }
+
+  /* No preset timing was provided, let's dynamically configure */
   switch (I2C_SPEED_GET(data->dev_config)) {
   case I2C_SPEED_STANDARD:
     i2c_h_min_time = 4000U;
@@ -138,6 +188,16 @@ Zephyr approach
           scldel - 1, sdadel, sclh - 1, scll - 1);
     break;
   } while (presc < 16);
+
+  if (presc >= 16U) {
+    LOG_DBG("I2C:failed to find prescaler value");
+    return -EINVAL;
+  }
+
+  LL_I2C_SetTiming(i2c, timing);
+
+  return 0;
+}
 #endif
 #define I2C_TIMING 0x00F02B86 // Also try: 0x0020098E, 0x00F02B86, 0x00D00E28
 // the 002 version is 100kHz with HSI = 16MHz
@@ -240,51 +300,65 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 											 const embvm::i2c::master::cb_t& cb) noexcept
 {
 	auto status = embvm::i2c::status::ok;
+	auto i2c_inst = i2c_instance[device_];
+	assert(i2c_inst); // Instance is not valid if failed
 
-#if 0
-  nRFTWIMTranslator::set_transfer_address(TTWIIndex, op.address);
-  switch(op.op)
-  {
-    case embvm::i2c::operation::continueWriteStop:
-    case embvm::i2c::operation::write: {
-      status = nRFTWIMTranslator::tx_transfer_blocking(
-        TTWIIndex, op.tx_buffer, op.tx_size, nRFTWIMTranslator::STOP);
-      break;
-    }
-    case embvm::i2c::operation::writeNoStop:
-    case embvm::i2c::operation::continueWriteNoStop: {
-      status = nRFTWIMTranslator::tx_transfer_blocking(
-        TTWIIndex, op.tx_buffer, op.tx_size, nRFTWIMTranslator::NO_STOP);
-      break;
-    }
-    case embvm::i2c::operation::read: {
-      status =
-        nRFTWIMTranslator::rx_transfer_blocking(TTWIIndex, op.rx_buffer, op.rx_size);
-      break;
-    }
-    case embvm::i2c::operation::writeRead: {
-      status = nRFTWIMTranslator::txrx_transfer_blocking(
-        TTWIIndex, op.tx_buffer, op.tx_size, op.rx_buffer, op.rx_size);
-      break;
-    }
-    case embvm::i2c::operation::ping: {
-      static uint8_t ping_dummy_byte_;
+	// TODO: handle transfers > 255 bytes using reload mode
+	assert(op.tx_size <= 255 && op.rx_size <= 255);
 
-      status = nRFTWIMTranslator::rx_transfer_blocking(TTWIIndex, &ping_dummy_byte_,
-                               sizeof(ping_dummy_byte_));
-      break;
-    }
-    case embvm::i2c::operation::stop: {
-      nRFTWIMTranslator::stop_condition(TTWIIndex);
-      break;
-    }
-    case embvm::i2c::operation::restart: {
-      // TODO: is this enough?
-      nRFTWIMTranslator::stop_condition(TTWIIndex);
-      break;
-    }
-  }
-#endif
+	switch(op.op)
+	{
+		case embvm::i2c::operation::continueWriteStop:
+		case embvm::i2c::operation::write: {
+			// TODO: is this case really separated, because continue write I don't want to generate
+			// a start? Or is it fine?
+			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT,
+								  op.tx_size, LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_START_WRITE);
+			break;
+		}
+		case embvm::i2c::operation::writeNoStop:
+		case embvm::i2c::operation::continueWriteNoStop: {
+			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT,
+								  op.tx_size, LL_I2C_MODE_SOFTEND, LL_I2C_GENERATE_START_WRITE);
+			break;
+		}
+		case embvm::i2c::operation::read: {
+			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT,
+								  op.tx_size, LL_I2C_MODE_SOFTEND, LL_I2C_GENERATE_START_READ);
+			break;
+		}
+		case embvm::i2c::operation::writeRead: {
+			// TODO: implement... need to call twice
+			// First, START_WRITE, then START READ?
+			assert(0);
+			break;
+		}
+		case embvm::i2c::operation::ping: {
+			// TODO: zero-bytes correct here?
+			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT, 0,
+								  LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_START_WRITE);
+			break;
+		}
+		case embvm::i2c::operation::stop: {
+			// TODO?
+			// LL_I2C_GenerateStopCondition(i2c_inst);
+			// Instance, slave address, slave address size, transfer size, end mode, request);
+			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT, 0,
+								  LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_STOP);
+			break;
+		}
+		case embvm::i2c::operation::restart: {
+			// TODO: does this work? Do we need to disable it? Should we use handle transfer?
+			LL_I2C_GenerateStartCondition(i2c_inst);
+			break;
+		}
+	}
+
+	// TODO: how to set status?
+
+	// Non-dma, we have:
+	// void LL_I2C_TransmitData8(I2C_TypeDef *I2Cx, uint8_t Data)
+	// uint8_t LL_I2C_ReceiveData8(I2C_TypeDef *I2Cx)
 
 	return status;
 }
