@@ -38,6 +38,8 @@ constexpr std::array<unsigned, 4> i2c_clock_source = {
 	LL_RCC_I2C1_CLKSOURCE_SYSCLK, LL_RCC_I2C2_CLKSOURCE_SYSCLK, LL_RCC_I2C3_CLKSOURCE_SYSCLK,
 	LL_RCC_I2C4_CLKSOURCE_SYSCLK};
 
+constexpr std::array<unsigned, 2> dma_enable_bits = {RCC_AHB1ENR_DMA1EN, RCC_AHB1ENR_DMA2EN};
+
 }; // namespace
 
 void STM32ClockControl::gpioEnable(embvm::gpio::port port) noexcept
@@ -84,5 +86,19 @@ void STM32ClockControl::i2cDisable(uint8_t device) noexcept
 {
 	uint32_t val = embutil::volatile_load(&RCC->AHB1ENR);
 	val |= i2c_enable_bits[device];
+	embutil::volatile_store(&RCC->AHB1ENR, val);
+}
+
+void STM32ClockControl::dmaEnable(uint8_t device) noexcept
+{
+	uint32_t val = embutil::volatile_load(&RCC->AHB1ENR);
+	val |= dma_enable_bits[device];
+	embutil::volatile_store(&RCC->AHB1ENR, val);
+}
+
+void STM32ClockControl::dmaDisable(uint8_t device) noexcept
+{
+	uint32_t val = embutil::volatile_load(&RCC->AHB1ENR);
+	val |= dma_enable_bits[device];
 	embutil::volatile_store(&RCC->AHB1ENR, val);
 }

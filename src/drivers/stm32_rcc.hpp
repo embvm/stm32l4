@@ -70,6 +70,25 @@ class STM32ClockControl
 	 */
 	static void i2cDisable(uint8_t device) noexcept;
 
+	// TODO: define a portable type like the ones above
+	/** Enable the peripheral clock to one of the DMA devices
+	 *
+	 * @precondition DMA device is valid for the STM32 processor.
+	 * @postcondition DMA device's peripheral clock is enabled
+	 *
+	 * @param [in] The DMA device ID to enable.
+	 */
+	static void dmaEnable(uint8_t device) noexcept;
+
+	/** Disable the peripheral clock to one of the DMA devices
+	 *
+	 * @precondition DMA device is valid for the STM32 processor.
+	 * @postcondition DMA device's peripheral clock is disabled
+	 *
+	 * @param [in] The DMA device ID to enable.
+	 */
+	static void dmaDisable(uint8_t device) noexcept;
+
   private:
 	/// This class can't be instantiated
 	STM32ClockControl() = default;
