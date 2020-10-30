@@ -15,11 +15,11 @@ static std::array<uint32_t const, STM32DMA::channel::MAX_CH> transfer_error_flag
 	DMA_ISR_TEIF1, DMA_ISR_TEIF2, DMA_ISR_TEIF3, DMA_ISR_TEIF4,
 	DMA_ISR_TEIF5, DMA_ISR_TEIF6, DMA_ISR_TEIF7};
 
-constexpr std::array<std::array<unsigned, STM32DMA::channel::MAX_CH>, 2> irq_num = {
-	std::array<unsigned, STM32DMA::channel::MAX_CH>{
+constexpr std::array<std::array<int, STM32DMA::channel::MAX_CH>, 2> irq_num = {
+	std::array<int, STM32DMA::channel::MAX_CH>{
 		DMA1_Channel1_IRQn, DMA1_Channel2_IRQn, DMA1_Channel3_IRQn, DMA1_Channel4_IRQn,
 		DMA1_Channel5_IRQn, DMA1_Channel6_IRQn, DMA1_Channel7_IRQn},
-	std::array<unsigned, STM32DMA::channel::MAX_CH>{
+	std::array<int, STM32DMA::channel::MAX_CH>{
 		DMA2_Channel1_IRQn, DMA2_Channel2_IRQn, DMA2_Channel3_IRQn, DMA2_Channel4_IRQn,
 		DMA2_Channel5_IRQn, DMA2_Channel6_IRQn, DMA2_Channel7_IRQn},
 };
@@ -198,14 +198,9 @@ void STM32DMA::enableInterrupts() noexcept
 	NVICControl::priority(irq, 4); // TODO: how to configure priority for the driver?
 	NVICControl::enable(irq);
 
-	// TODO:
-#if 0
-  /* (5) Enable DMA1 interrupts complete/error */
-  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_2);
-  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_2);
-  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
-  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_3);
-#endif
+	// Enable complete/error interrupts
+	LL_DMA_EnableIT_TC(dma_devices[device_], channel_);
+	LL_DMA_EnableIT_TE(dma_devices[device_], channel_);
 }
 
 void STM32DMA::disableInterrupts() noexcept
@@ -214,12 +209,8 @@ void STM32DMA::disableInterrupts() noexcept
 	assert(irq); // Check that channel is supported
 	NVICControl::disable(irq);
 
-	// TODO: - disable
-#if 0
-  /* (5) Enable DMA1 interrupts complete/error */
-  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_2);
-  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_2);
-  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
-  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_3);
-#endif
+	// Disable complete/error interrupts
+	// Enable complete/error interrupts
+	LL_DMA_DisableIT_TC(dma_devices[device_], channel_);
+	LL_DMA_DisableIT_TE(dma_devices[device_], channel_);
 }
