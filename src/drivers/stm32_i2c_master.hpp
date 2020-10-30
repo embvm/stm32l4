@@ -11,6 +11,7 @@
 class STM32I2CMaster final : public embvm::i2c::master
 {
   public:
+	// TODO: refactor into base class?
 	enum device : uint8_t
 	{
 		i2c1 = 0,
