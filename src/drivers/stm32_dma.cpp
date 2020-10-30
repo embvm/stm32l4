@@ -150,8 +150,6 @@ void STM32DMA::stop_() noexcept {}
   */
 void Configure_DMA(void)
 {
-  /* (1) Enable the clock of DMA1 */
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
 
   /* (2) Configure NVIC for DMA1_Channel2 and DMA1_Channel3 */
   NVIC_SetPriority(DMA1_Channel2_IRQn, 0x4);

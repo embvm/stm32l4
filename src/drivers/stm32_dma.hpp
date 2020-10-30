@@ -5,6 +5,7 @@
 
 // TODO: document requirement to enable the DMA clock in the hardware platform, since
 // we can have multiple channels configured. That means we can't just start/stop DMA.
+// TODO: need to take in priority for interrupt for the channel
 
 // TODO: template, make compile-time configuration?
 // Would require a forwarding helper class
