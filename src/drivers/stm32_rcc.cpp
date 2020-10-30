@@ -1,6 +1,7 @@
 #include "stm32_rcc.hpp"
 #include <array>
 #include <processor_includes.hpp>
+#include <stm32l4xx_ll_rcc.h>
 #include <volatile/volatile.hpp>
 
 // TODO: how can we be flexible here, adjusting for other chips?
@@ -27,6 +28,16 @@ constexpr std::array<unsigned, 9> timer_enable_bits = {0,
 													   RCC_APB1ENR1_TIM6EN,
 													   RCC_APB1ENR1_TIM7EN,
 													   RCC_APB2ENR_TIM8EN_Pos};
+
+// I2C4 is not supported on this device
+constexpr std::array<unsigned, 4> i2c_enable_bits = {RCC_APB1ENR1_I2C1EN, RCC_APB1ENR1_I2C2EN,
+													 RCC_APB1ENR1_I2C3EN, 0};
+
+// TODO: should we have a way to select other clocks? Or just enforce sysclock for now?
+constexpr std::array<unsigned, 4> i2c_clock_source = {
+	LL_RCC_I2C1_CLKSOURCE_SYSCLK, LL_RCC_I2C2_CLKSOURCE_SYSCLK, LL_RCC_I2C3_CLKSOURCE_SYSCLK,
+	LL_RCC_I2C4_CLKSOURCE_SYSCLK};
+
 }; // namespace
 
 void STM32ClockControl::gpioEnable(embvm::gpio::port port) noexcept
@@ -59,4 +70,19 @@ void STM32ClockControl::timerDisable(embvm::timer::channel timer) noexcept
 	uint32_t val = embutil::volatile_load(reg);
 	val &= ~(timer_enable_bits[timer]);
 	embutil::volatile_store(reg, val);
+}
+
+void STM32ClockControl::i2cEnable(uint8_t device) noexcept
+{
+	uint32_t val = embutil::volatile_load(&RCC->AHB1ENR);
+	val |= i2c_enable_bits[device];
+	embutil::volatile_store(&RCC->AHB1ENR, val);
+	LL_RCC_SetI2CClockSource(i2c_clock_source[device]);
+}
+
+void STM32ClockControl::i2cDisable(uint8_t device) noexcept
+{
+	uint32_t val = embutil::volatile_load(&RCC->AHB1ENR);
+	val |= i2c_enable_bits[device];
+	embutil::volatile_store(&RCC->AHB1ENR, val);
 }

@@ -42,7 +42,7 @@ class STM32ClockControl
 	 */
 	static void timerEnable(embvm::timer::channel timer) noexcept;
 
-	/** Disable the peripheral clock to one of the timer devices..
+	/** Disable the peripheral clock to one of the timer devices.
 	 *
 	 * @precondition timer is a valid channel for the STM32 processor.
 	 * @postcondition Timer peripheral clock is disabled.
@@ -50,6 +50,25 @@ class STM32ClockControl
 	 * @param [in] timer The timer device to disable.
 	 */
 	static void timerDisable(embvm::timer::channel timer) noexcept;
+
+	// TODO: define a portable type like the ones above.
+	/** Enable the peripheral clock to one of the I2C devices
+	 *
+	 * @precondition I2C Device is valid for the STM32 processor.
+	 * @postcondition I2C device's peripheral clock is enabled.
+	 *
+	 * @param [in] timer The timer device to enable.
+	 */
+	static void i2cEnable(uint8_t device) noexcept;
+
+	/** Disable the peripheral clock to one of the I2C devices.
+	 *
+	 * @precondition I2C Device is valid for the STM32 processor.
+	 * @postcondition I2C device's peripheral clock is disabled.
+	 *
+	 * @param [in] timer The timer device to disable.
+	 */
+	static void i2cDisable(uint8_t device) noexcept;
 
   private:
 	/// This class can't be instantiated
