@@ -200,6 +200,7 @@ void STM32Timer::stop_() noexcept
 {
 	LL_TIM_DisableIT_CC1(timer_instance[channel_]); // TODO: how to select proper channel?
 	disableInterrupts();
+	LL_TIM_DeInit(timer_instance[channel_]);
 	STM32ClockControl::timerDisable(channel_);
 }
 
