@@ -18,6 +18,7 @@ void NucleoL4R5ZI_HWPlatform::init_() noexcept
 	// We need to turn on the GPIO clocks before we start the gpio/led drivers.
 	STM32ClockControl::gpioEnable(embvm::gpio::port::B);
 	STM32ClockControl::gpioEnable(embvm::gpio::port::C);
+	STM32ClockControl::gpioEnable(embvm::gpio::port::F);
 
 	// start all LEDs
 	// turn them off? Or just trust that they start off?
