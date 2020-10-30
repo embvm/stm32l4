@@ -3,7 +3,9 @@
 
 #include <driver/led.hpp>
 #include <hw_platform/virtual_hw_platform.hpp>
+#include <stm32_dma.hpp>
 #include <stm32_gpio.hpp>
+#include <stm32_i2c_master.hpp>
 #include <stm32_timer.hpp>
 #include <stm32l4r5.hpp>
 
@@ -44,6 +46,10 @@ class NucleoL4R5ZI_HWPlatform : public embvm::VirtualHwPlatformBase<NucleoL4R5ZI
 
 	// TODO: this isn't actually quite 1s right now...
 	STM32Timer timer0{embvm::timer::channel::CH2, std::chrono::seconds(1)};
+
+	STM32DMA dma_ch_i2c_tx{STM32DMA::device::dma1, STM32DMA::channel::CH1};
+	STM32DMA dma_ch_i2c_rx{STM32DMA::device::dma1, STM32DMA::channel::CH2};
+	STM32I2CMaster i2c2{STM32I2CMaster::device::i2c2, dma_ch_i2c_tx, dma_ch_i2c_rx};
 };
 
 #if 0

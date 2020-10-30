@@ -1,6 +1,8 @@
 #include "NucleoL4RZI_HWPlatform.hpp"
 #include <stm32_rcc.hpp>
 
+// TODO: shoudl I check/increae clock speed?
+
 NucleoL4R5ZI_HWPlatform::NucleoL4R5ZI_HWPlatform() noexcept
 {
 	registerDriver("led1", &led1);
@@ -18,6 +20,10 @@ void NucleoL4R5ZI_HWPlatform::init_() noexcept
 	// We need to turn on the GPIO clocks before we start the gpio/led drivers.
 	STM32ClockControl::gpioEnable(embvm::gpio::port::B);
 	STM32ClockControl::gpioEnable(embvm::gpio::port::C);
+	STM32ClockControl::gpioEnable(embvm::gpio::port::F);
+
+	// We need to turn on the DMA clocks before we start/stop the dma drivers
+	STM32ClockControl::dmaEnable(STM32DMA::device::dma1);
 
 	// start all LEDs
 	// turn them off? Or just trust that they start off?
@@ -30,6 +36,8 @@ void NucleoL4R5ZI_HWPlatform::init_() noexcept
 		led2.toggle();
 		led3.toggle();
 	});
+
+	i2c2.start();
 }
 
 void NucleoL4R5ZI_HWPlatform::leds_off() noexcept
