@@ -6,6 +6,8 @@
 #include <stm32l4xx_ll_tim.h>
 #include <volatile/volatile.hpp>
 
+// TODO: decouple RCC from this class, handle instead in the hardware platform?
+
 extern "C" void TIM1_CC_IRQHandler();
 extern "C" void TIM2_IRQHandler();
 extern "C" void TIM3_IRQHandler();
