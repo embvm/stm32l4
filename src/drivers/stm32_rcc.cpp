@@ -108,3 +108,17 @@ void STM32ClockControl::dmaDisable(uint8_t device) noexcept
 	val &= ~(dma_enable_bits[device]);
 	embutil::volatile_store(&RCC->AHB1ENR, val);
 }
+
+void STM32ClockControl::dmaMuxEnable() noexcept
+{
+	uint32_t val = embutil::volatile_load(&RCC->AHB1ENR);
+	val |= RCC_AHB1ENR_DMAMUX1EN;
+	embutil::volatile_store(&RCC->AHB1ENR, val);
+}
+
+void STM32ClockControl::dmaMuxDisable() noexcept
+{
+	uint32_t val = embutil::volatile_load(&RCC->AHB1ENR);
+	val &= ~RCC_AHB1ENR_DMAMUX1EN;
+	embutil::volatile_store(&RCC->AHB1ENR, val);
+}

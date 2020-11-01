@@ -7,21 +7,29 @@
 
 #pragma mark - Variables -
 
-static std::array<DMA_TypeDef* const, STM32DMA::device::MAX_DMA> dma_devices = {DMA1, DMA2};
-static std::array<uint32_t const, STM32DMA::channel::MAX_CH> transfer_complete_flags = {
+constexpr std::array<DMA_TypeDef* const, STM32DMA::device::MAX_DMA> dma_devices = {DMA1, DMA2};
+constexpr std::array<uint32_t const, STM32DMA::channel::MAX_CH> transfer_complete_flags = {
 	DMA_ISR_TCIF1, DMA_ISR_TCIF2, DMA_ISR_TCIF3, DMA_ISR_TCIF4,
 	DMA_ISR_TCIF5, DMA_ISR_TCIF6, DMA_ISR_TCIF7};
 
-static std::array<uint32_t const, STM32DMA::channel::MAX_CH> transfer_error_flags = {
+constexpr std::array<uint32_t const, STM32DMA::channel::MAX_CH> transfer_error_flags = {
 	DMA_ISR_TEIF1, DMA_ISR_TEIF2, DMA_ISR_TEIF3, DMA_ISR_TEIF4,
 	DMA_ISR_TEIF5, DMA_ISR_TEIF6, DMA_ISR_TEIF7};
 
-constexpr std::array<std::array<int, STM32DMA::channel::MAX_CH>, STM32DMA::device::MAX_DMA>
+constexpr std::array<uint32_t const, STM32DMA::channel::MAX_CH> clear_transfer_general_flags = {
+	DMA_ISR_GIF1, DMA_ISR_GIF2, DMA_ISR_GIF3, DMA_ISR_GIF4,
+	DMA_ISR_GIF5, DMA_ISR_GIF6, DMA_ISR_GIF7};
+
+constexpr std::array<uint32_t const, STM32DMA::channel::MAX_CH> clear_transfer_complete_flags = {
+	DMA_IFCR_CTCIF1, DMA_IFCR_CTCIF2, DMA_IFCR_CTCIF3, DMA_IFCR_CTCIF4,
+	DMA_IFCR_CTCIF5, DMA_IFCR_CTCIF6, DMA_IFCR_CTCIF7};
+
+constexpr std::array<std::array<IRQn_Type, STM32DMA::channel::MAX_CH>, STM32DMA::device::MAX_DMA>
 	irq_num = {
-		std::array<int, STM32DMA::channel::MAX_CH>{
+		std::array<IRQn_Type, STM32DMA::channel::MAX_CH>{
 			DMA1_Channel1_IRQn, DMA1_Channel2_IRQn, DMA1_Channel3_IRQn, DMA1_Channel4_IRQn,
 			DMA1_Channel5_IRQn, DMA1_Channel6_IRQn, DMA1_Channel7_IRQn},
-		std::array<int, STM32DMA::channel::MAX_CH>{
+		std::array<IRQn_Type, STM32DMA::channel::MAX_CH>{
 			DMA2_Channel1_IRQn, DMA2_Channel2_IRQn, DMA2_Channel3_IRQn, DMA2_Channel4_IRQn,
 			DMA2_Channel5_IRQn, DMA2_Channel6_IRQn, DMA2_Channel7_IRQn},
 };
@@ -41,6 +49,15 @@ static inline bool check_dma_error_flag(STM32DMA::device dev, STM32DMA::channel 
 	return READ_BIT(dma_devices[dev]->ISR, transfer_error_flags[ch]);
 }
 
+static inline bool clear_dma_general_int_flag(STM32DMA::device dev, STM32DMA::channel ch)
+{
+	return CLEAR_BIT(dma_devices[dev]->IFCR, clear_transfer_general_flags[ch]);
+}
+
+static inline bool clear_transfer_complete_flag(STM32DMA::device dev, STM32DMA::channel ch)
+{
+	return CLEAR_BIT(dma_devices[dev]->IFCR, clear_transfer_complete_flags[ch]);
+}
 #pragma mark - Interrupt Handling -
 
 extern "C" void DMA1_Channel1_IRQHandler();
@@ -62,6 +79,7 @@ extern "C" void DMA2_Channel7_IRQHandler();
 // DMA2D_IRQHandler
 // DMAMUX1_OVR_IRQHandler
 
+// TODO: bottom half handler or dispatch
 static void dma_handler(STM32DMA::device dev, STM32DMA::channel ch)
 {
 	auto handler = irq_handlers[dev][ch];
@@ -70,6 +88,7 @@ static void dma_handler(STM32DMA::device dev, STM32DMA::channel ch)
 
 	if(check_dma_complete_flag(dev, ch))
 	{
+		clear_transfer_complete_flag(dev, ch);
 		status = STM32DMA::status::ok;
 	}
 	else if(check_dma_error_flag(dev, ch))
@@ -81,6 +100,7 @@ static void dma_handler(STM32DMA::device dev, STM32DMA::channel ch)
 		assert(0); // Case not handled!
 	}
 
+	clear_dma_general_int_flag(dev, ch);
 	handler(status);
 }
 
@@ -192,7 +212,7 @@ void STM32DMA::disable() noexcept
 void STM32DMA::start_() noexcept
 {
 	auto inst = dma_devices[device_];
-	assert(inst && source_address_ && dest_address_);
+	assert(inst && configuration_);
 
 	LL_DMA_ConfigTransfer(inst, channel_, configuration_);
 	LL_DMA_SetPeriphRequest(inst, channel_, mux_request_);

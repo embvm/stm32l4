@@ -89,6 +89,10 @@ class STM32ClockControl
 	 */
 	static void dmaDisable(uint8_t device) noexcept;
 
+	// TODO: document. Do we fold into dmaDisable?
+	static void dmaMuxEnable() noexcept;
+	static void dmaMuxDisable() noexcept;
+
   private:
 	/// This class can't be instantiated
 	STM32ClockControl() = default;
