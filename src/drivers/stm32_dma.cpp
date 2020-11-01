@@ -2,6 +2,7 @@
 #include <array>
 #include <cassert>
 #include <nvic.hpp>
+#include <processor_includes.hpp>
 #include <stm32l4xx_ll_dma.h>
 
 #pragma mark - Variables -
@@ -64,10 +65,12 @@ static void dma_handler(STM32DMA::device dev, STM32DMA::channel ch)
 	if(check_dma_complete_flag(dev, ch))
 	{
 		// TODO: complete callback
+		assert(0);
 	}
 	else if(check_dma_error_flag(dev, ch))
 	{
 		// TODO: error callback
+		assert(0);
 	}
 }
 
@@ -143,52 +146,57 @@ void DMA2_Channel7_IRQHandler()
 
 #pragma mark - Driver -
 
+void STM32DMA::setAddresses(void* source_address, void* dest_address, size_t transfer_size) noexcept
+{
+	auto inst = dma_devices[device_];
+	assert(inst); // Instance invalid
+
+	// This function can only be called if channel disabled
+	assert(LL_DMA_IsEnabledChannel(inst, channel_) == false);
+	assert(source_address && dest_address && transfer_size); // need non-nullptr and non-zero data
+
+	LL_DMA_ConfigAddresses(inst, channel_, reinterpret_cast<uint32_t>(source_address),
+						   reinterpret_cast<uint32_t>(dest_address),
+						   LL_DMA_GetDataTransferDirection(inst, channel_));
+	LL_DMA_SetDataLength(inst, channel_, transfer_size);
+}
+
+void STM32DMA::enable() noexcept
+{
+	auto inst = dma_devices[device_];
+	assert(inst); // Check for invalid device instance
+	assert(LL_DMA_IsEnabledChannel(inst, channel_) == false);
+
+	LL_DMA_EnableChannel(inst, channel_);
+}
+
+void STM32DMA::disable() noexcept
+{
+	auto inst = dma_devices[device_];
+	assert(inst); // Check for invalid device instance
+	assert(LL_DMA_IsEnabledChannel(inst, channel_));
+
+	LL_DMA_DisableChannel(inst, channel_);
+}
+
 void STM32DMA::start_() noexcept
 {
+	auto inst = dma_devices[device_];
+	assert(inst && source_address_ && dest_address_);
+
+	LL_DMA_ConfigTransfer(inst, channel_, configuration_);
+	LL_DMA_SetPeriphRequest(inst, channel_, mux_request_);
+
 	enableInterrupts();
-
-#if 0
-/**
-  * @brief  This function configures the DMA Channels for I2C3(TXDR) and I2C3(RXDR).
-  * @note   This function is used to :
-  *         -1- Enable the clock of DMA1.
-  *         -2- Configure NVIC for DMA1_Channel2 and DMA1_Channel3.
-  *         -3- Configure the DMA functional parameters for Master Transmit.
-  *         -4- Configure the DMA functional parameters for Master Receive.
-  *         -5- Enable DMA1 interrupts complete/error.
-  * @param   None
-  * @retval  None
-  */
-void Configure_DMA(void)
-{
-  /* (3) Configure the DMA functional parameters for Master Transmit */
-  LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_2, LL_DMA_DIRECTION_MEMORY_TO_PERIPH | \
-                                                LL_DMA_PRIORITY_HIGH              | \
-                                                LL_DMA_MODE_NORMAL                | \
-                                                LL_DMA_PERIPH_NOINCREMENT         | \
-                                                LL_DMA_MEMORY_INCREMENT           | \
-                                                LL_DMA_PDATAALIGN_BYTE            | \
-                                                LL_DMA_MDATAALIGN_BYTE);
-  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_2, (uint32_t)(*pMasterTransmitBuffer), (uint32_t)LL_I2C_DMA_GetRegAddr(I2C3, LL_I2C_DMA_REG_DATA_TRANSMIT), LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_2));
-  LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_2, LL_DMA_REQUEST_3);
-
-  /* (4) Configure the DMA functional parameters for Master Receive */
-  LL_DMA_ConfigTransfer(DMA1, LL_DMA_CHANNEL_3, LL_DMA_DIRECTION_PERIPH_TO_MEMORY | \
-                                                LL_DMA_PRIORITY_HIGH              | \
-                                                LL_DMA_MODE_NORMAL                | \
-                                                LL_DMA_PERIPH_NOINCREMENT         | \
-                                                LL_DMA_MEMORY_INCREMENT           | \
-                                                LL_DMA_PDATAALIGN_BYTE            | \
-                                                LL_DMA_MDATAALIGN_BYTE);
-  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3, (uint32_t)LL_I2C_DMA_GetRegAddr(I2C3, LL_I2C_DMA_REG_DATA_RECEIVE), (uint32_t)&(aMasterReceiveBuffer), LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_3));
-  LL_DMA_SetPeriphRequest(DMA1, LL_DMA_CHANNEL_3, LL_DMA_REQUEST_3);
-}
-#endif
 }
 
 void STM32DMA::stop_() noexcept
 {
+	auto inst = dma_devices[device_];
+	assert(inst); // Check for invalid device instance
+
 	disableInterrupts();
+	LL_DMA_DisableChannel(inst, channel_); // TODO: does this need to be here, or elsewhere?
 }
 
 void STM32DMA::enableInterrupts() noexcept
