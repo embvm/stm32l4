@@ -91,7 +91,7 @@ void STM32ClockControl::i2cDisable(uint8_t device) noexcept
 	volatile uint32_t* const reg = i2c_enable_reg[device];
 	assert(reg);
 	uint32_t val = embutil::volatile_load(reg);
-	val |= i2c_enable_bits[device];
+	val &= ~(i2c_enable_bits[device]);
 	embutil::volatile_store(reg, val);
 }
 
@@ -105,6 +105,6 @@ void STM32ClockControl::dmaEnable(uint8_t device) noexcept
 void STM32ClockControl::dmaDisable(uint8_t device) noexcept
 {
 	uint32_t val = embutil::volatile_load(&RCC->AHB1ENR);
-	val |= dma_enable_bits[device];
+	val &= ~(dma_enable_bits[device]);
 	embutil::volatile_store(&RCC->AHB1ENR, val);
 }
