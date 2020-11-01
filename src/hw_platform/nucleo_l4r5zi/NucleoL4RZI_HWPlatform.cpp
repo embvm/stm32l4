@@ -37,9 +37,6 @@ void NucleoL4R5ZI_HWPlatform::init_() noexcept
 		led3.toggle();
 	});
 
-	// Need to configure DMA before we configure i2c1
-	dma_ch_i2c_tx.start();
-	dma_ch_i2c_rx.start();
 	i2c2.start();
 }
 
