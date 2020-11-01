@@ -24,6 +24,7 @@ void NucleoL4R5ZI_HWPlatform::init_() noexcept
 
 	// We need to turn on the DMA clocks before we start/stop the dma drivers
 	STM32ClockControl::dmaEnable(STM32DMA::device::dma1);
+	STM32ClockControl::dmaMuxEnable();
 
 	// start all LEDs
 	// turn them off? Or just trust that they start off?
