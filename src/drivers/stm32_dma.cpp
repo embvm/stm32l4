@@ -4,6 +4,7 @@
 #include <nvic.hpp>
 #include <processor_includes.hpp>
 #include <stm32l4xx_ll_dma.h>
+#include <volatile/volatile.hpp>
 
 #pragma mark - Variables -
 
@@ -49,15 +50,16 @@ static inline bool check_dma_error_flag(STM32DMA::device dev, STM32DMA::channel 
 	return READ_BIT(dma_devices[dev]->ISR, transfer_error_flags[ch]);
 }
 
-static inline bool clear_dma_general_int_flag(STM32DMA::device dev, STM32DMA::channel ch)
+static inline void clear_dma_general_int_flag(STM32DMA::device dev, STM32DMA::channel ch)
 {
-	return CLEAR_BIT(dma_devices[dev]->IFCR, clear_transfer_general_flags[ch]);
+	embutil::volatile_store(&dma_devices[dev]->IFCR, clear_transfer_general_flags[ch]);
 }
 
-static inline bool clear_transfer_complete_flag(STM32DMA::device dev, STM32DMA::channel ch)
+static inline void clear_transfer_complete_flag(STM32DMA::device dev, STM32DMA::channel ch)
 {
-	return CLEAR_BIT(dma_devices[dev]->IFCR, clear_transfer_complete_flags[ch]);
+	embutil::volatile_store(&dma_devices[dev]->IFCR, clear_transfer_complete_flags[ch]);
 }
+
 #pragma mark - Interrupt Handling -
 
 extern "C" void DMA1_Channel1_IRQHandler();
