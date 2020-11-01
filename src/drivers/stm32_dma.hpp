@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <driver/driver.hpp>
+#include <inplace_function/inplace_function.hpp>
 
 // TODO: document requirement to enable the DMA clock in the hardware platform, since
 // we can have multiple channels configured. That means we can't just start/stop DMA.
@@ -56,6 +57,15 @@ enabling and disabling the channel?
 class STM32DMA final : public embvm::DriverBase
 {
   public:
+	enum class status
+	{
+		ok = 0,
+		error
+		// TODO: expand
+	};
+
+	using cb_t = stdext::inplace_function<void(STM32DMA::status)>;
+
 	enum device : uint8_t
 	{
 		dma1 = 0,
@@ -150,6 +160,10 @@ class STM32DMA final : public embvm::DriverBase
 	 * @postcondition The DMA device is disabled.
 	 */
 	void disable() noexcept;
+
+	// TODO: document
+	void registerCallback(const cb_t& cb) noexcept;
+	void registerCallback(cb_t&& cb) noexcept;
 
   private:
 	// Driver base functions

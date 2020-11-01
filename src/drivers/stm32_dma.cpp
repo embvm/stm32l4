@@ -16,14 +16,18 @@ static std::array<uint32_t const, STM32DMA::channel::MAX_CH> transfer_error_flag
 	DMA_ISR_TEIF1, DMA_ISR_TEIF2, DMA_ISR_TEIF3, DMA_ISR_TEIF4,
 	DMA_ISR_TEIF5, DMA_ISR_TEIF6, DMA_ISR_TEIF7};
 
-constexpr std::array<std::array<int, STM32DMA::channel::MAX_CH>, 2> irq_num = {
-	std::array<int, STM32DMA::channel::MAX_CH>{
-		DMA1_Channel1_IRQn, DMA1_Channel2_IRQn, DMA1_Channel3_IRQn, DMA1_Channel4_IRQn,
-		DMA1_Channel5_IRQn, DMA1_Channel6_IRQn, DMA1_Channel7_IRQn},
-	std::array<int, STM32DMA::channel::MAX_CH>{
-		DMA2_Channel1_IRQn, DMA2_Channel2_IRQn, DMA2_Channel3_IRQn, DMA2_Channel4_IRQn,
-		DMA2_Channel5_IRQn, DMA2_Channel6_IRQn, DMA2_Channel7_IRQn},
+constexpr std::array<std::array<int, STM32DMA::channel::MAX_CH>, STM32DMA::device::MAX_DMA>
+	irq_num = {
+		std::array<int, STM32DMA::channel::MAX_CH>{
+			DMA1_Channel1_IRQn, DMA1_Channel2_IRQn, DMA1_Channel3_IRQn, DMA1_Channel4_IRQn,
+			DMA1_Channel5_IRQn, DMA1_Channel6_IRQn, DMA1_Channel7_IRQn},
+		std::array<int, STM32DMA::channel::MAX_CH>{
+			DMA2_Channel1_IRQn, DMA2_Channel2_IRQn, DMA2_Channel3_IRQn, DMA2_Channel4_IRQn,
+			DMA2_Channel5_IRQn, DMA2_Channel6_IRQn, DMA2_Channel7_IRQn},
 };
+
+static std::array<std::array<STM32DMA::cb_t, STM32DMA::channel::MAX_CH>, STM32DMA::device::MAX_DMA>
+	irq_handlers = {nullptr};
 
 #pragma mark - Helper Functions -
 
@@ -60,18 +64,24 @@ extern "C" void DMA2_Channel7_IRQHandler();
 
 static void dma_handler(STM32DMA::device dev, STM32DMA::channel ch)
 {
-	assert(0); // TODO
+	auto handler = irq_handlers[dev][ch];
+	STM32DMA::status status;
+	assert(handler); // check to see if a valid handler is registered
 
 	if(check_dma_complete_flag(dev, ch))
 	{
-		// TODO: complete callback
-		assert(0);
+		status = STM32DMA::status::ok;
 	}
 	else if(check_dma_error_flag(dev, ch))
 	{
-		// TODO: error callback
-		assert(0);
+		status = STM32DMA::status::error;
 	}
+	else
+	{
+		assert(0); // Case not handled!
+	}
+
+	handler(status);
 }
 
 void DMA1_Channel1_IRQHandler()
@@ -221,4 +231,14 @@ void STM32DMA::disableInterrupts() noexcept
 	// Enable complete/error interrupts
 	LL_DMA_DisableIT_TC(dma_devices[device_], channel_);
 	LL_DMA_DisableIT_TE(dma_devices[device_], channel_);
+}
+
+void STM32DMA::registerCallback(const STM32DMA::cb_t& cb) noexcept
+{
+	irq_handlers[device_][channel_] = cb;
+}
+
+void STM32DMA::registerCallback(STM32DMA::cb_t&& cb) noexcept
+{
+	irq_handlers[device_][channel_] = std::move(cb);
 }
