@@ -13,7 +13,7 @@
 // into the processor layer? This would help us keep drivers common.
 // One thought is taking the config-table approach that Beningo uses in his drivers.
 // Then we can make defs public, and keep the impl. private, accessing them through pointers.
-// TODO: DMA support
+// TODO: Set a timer to trigger a timeout callback (using timer manager?)
 
 /* Useful Developer Notes
  *
@@ -73,10 +73,10 @@ constexpr std::array<STM32_I2C_Pins_t, 4> i2c_pins =
   // I2C2 GPIO
   STM32_I2C_Pins_t{
     .sda_port = embvm::gpio::port::F,
-    .sda_pin= 1,
-    .sda_alt_func = LL_GPIO_AF_0,
+    .sda_pin= 0,
+    .sda_alt_func = LL_GPIO_AF_4,
     .scl_port = embvm::gpio::port::F,
-    .scl_pin = 0,
+    .scl_pin = 1,
     .scl_alt_func = LL_GPIO_AF_4
   },
   // TODO: I2C3 GPIO
@@ -130,12 +130,24 @@ extern "C" void I2C4_EV_IRQHandler(void);
 
 static void i2c_error_handler(STM32I2CMaster::device dev)
 {
-	assert(0); // TODO:
+	assert(0); // TODO: Handle error
 }
 
 static void i2c_event_handler(STM32I2CMaster::device dev)
 {
-	assert(0); // TODO:
+	auto inst = i2c_instance[dev];
+	assert(inst); // invalid instance
+
+	if(LL_I2C_IsActiveFlag_RXNE(inst))
+	{
+		// TODO: RX callback
+	}
+	else if(LL_I2C_IsActiveFlag_STOP(inst))
+	{
+		// End of transfer?
+		LL_I2C_ClearFlag_STOP(inst);
+		// Todo: master complete callback
+	}
 }
 
 void I2C1_ER_IRQHandler()
@@ -313,7 +325,13 @@ void STM32I2CMaster::start_() noexcept
 	auto i2c_inst = i2c_instance[device_];
 	assert(i2c_inst); // if failed, device is invalid
 
+	configure_i2c_pins_();
+
 	STM32ClockControl::i2cEnable(device_);
+
+	// Disable before modifying configuration registers
+	// TODO once working: can we remove?
+	LL_I2C_Disable(i2c_inst);
 
 	// TODO: can this be constexpr? LL init func doens't take const...
 	static LL_I2C_InitTypeDef initializer = {
@@ -326,16 +344,7 @@ void STM32I2CMaster::start_() noexcept
 		.OwnAddrSize = LL_I2C_OWNADDRESS1_7BIT,
 	};
 
-	tx_channel_.setConfiguration(LL_DMA_DIRECTION_MEMORY_TO_PERIPH | LL_DMA_PRIORITY_HIGH |
-									 LL_DMA_MODE_NORMAL | LL_DMA_PERIPH_NOINCREMENT |
-									 LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
-									 LL_DMA_MDATAALIGN_BYTE,
-								 dma_tx_routing[device_]);
-	rx_channel_.setConfiguration(LL_DMA_DIRECTION_PERIPH_TO_MEMORY | LL_DMA_PRIORITY_HIGH |
-									 LL_DMA_MODE_NORMAL | LL_DMA_PERIPH_NOINCREMENT |
-									 LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
-									 LL_DMA_MDATAALIGN_BYTE,
-								 dma_rx_routing[device_]);
+	configureDMA();
 
 	LL_I2C_EnableDMAReq_RX(i2c_inst);
 	LL_I2C_EnableDMAReq_TX(i2c_inst);
@@ -359,6 +368,49 @@ void STM32I2CMaster::stop_() noexcept
 	LL_I2C_DisableDMAReq_TX(i2c_inst);
 
 	STM32ClockControl::i2cDisable(device_);
+}
+
+void STM32I2CMaster::configureDMA() noexcept
+{
+	tx_channel_.setConfiguration(LL_DMA_DIRECTION_MEMORY_TO_PERIPH | LL_DMA_PRIORITY_HIGH |
+									 LL_DMA_MODE_NORMAL | LL_DMA_PERIPH_NOINCREMENT |
+									 LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
+									 LL_DMA_MDATAALIGN_BYTE,
+								 dma_tx_routing[device_]);
+	rx_channel_.setConfiguration(LL_DMA_DIRECTION_PERIPH_TO_MEMORY | LL_DMA_PRIORITY_HIGH |
+									 LL_DMA_MODE_NORMAL | LL_DMA_PERIPH_NOINCREMENT |
+									 LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
+									 LL_DMA_MDATAALIGN_BYTE,
+								 dma_rx_routing[device_]);
+
+	// TODO: does this happen here? or only if we need to handle special cases?
+	tx_channel_.registerCallback([this](STM32DMA::status status) {
+		if(status == STM32DMA::status::ok)
+		{
+			tx_channel_.disable();
+			transfer_completed_ = true;
+		}
+		else
+		{
+			// TODO: handle error?
+			assert(0); // transfer failed
+		}
+	});
+	rx_channel_.registerCallback([this](STM32DMA::status status) {
+		if(status == STM32DMA::status::ok)
+		{
+			rx_channel_.disable();
+			transfer_completed_ = true;
+		}
+		else
+		{
+			// TODO: handle error?
+			assert(0); // transfer failed
+		}
+	});
+
+	tx_channel_.start();
+	rx_channel_.start();
 }
 
 void STM32I2CMaster::configure_i2c_pins_() noexcept
@@ -402,8 +454,8 @@ void STM32I2CMaster::enableInterrupts() noexcept
 	 *  - Enable Stop interrupt
 	 */
 	// TODO: are these actually needed for DMA mode?
-	LL_I2C_EnableIT_TX(inst);
-	LL_I2C_EnableIT_RX(inst);
+	// LL_I2C_EnableIT_TX(inst);
+	// LL_I2C_EnableIT_RX(inst);
 	LL_I2C_EnableIT_NACK(inst);
 	LL_I2C_EnableIT_ERR(inst);
 	LL_I2C_EnableIT_STOP(inst);
@@ -417,8 +469,8 @@ void STM32I2CMaster::disableInterrupts() noexcept
 	assert(error_irq && event_irq && inst); // Check that channel is supported
 
 	// TODO: are these actually needed for DMA mode?
-	LL_I2C_DisableIT_TX(inst);
-	LL_I2C_DisableIT_RX(inst);
+	// LL_I2C_DisableIT_TX(inst);
+	// LL_I2C_DisableIT_RX(inst);
 	LL_I2C_DisableIT_NACK(inst);
 	LL_I2C_DisableIT_ERR(inst);
 	LL_I2C_DisableIT_STOP(inst);
@@ -434,8 +486,14 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 	auto i2c_inst = i2c_instance[device_];
 	assert(i2c_inst); // Instance is not valid if failed
 
+	// Note that the STM32 calls don't shift the address for us, so we need
+	// to do this manually.
+	uint32_t address = op.address << UINT32_C(1);
+
 	// TODO: handle transfers > 255 bytes using reload mode
 	assert(op.tx_size <= 255 && op.rx_size <= 255);
+
+	transfer_completed_ = false;
 
 	switch(op.op)
 	{
@@ -444,21 +502,21 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 			// TODO: is this case really separated, because continue write I don't want to generate
 			// a start? Or is it fine?
 			enableDMATx(tx_channel_, i2c_inst, op.tx_buffer, op.tx_size);
-			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT,
-								  op.tx_size, LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_START_WRITE);
+			LL_I2C_HandleTransfer(i2c_instance[device_], address, LL_I2C_ADDRSLAVE_7BIT, op.tx_size,
+								  LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_START_WRITE);
 			break;
 		}
 		case embvm::i2c::operation::writeNoStop:
 		case embvm::i2c::operation::continueWriteNoStop: {
 			enableDMATx(tx_channel_, i2c_inst, op.tx_buffer, op.tx_size);
-			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT,
-								  op.tx_size, LL_I2C_MODE_SOFTEND, LL_I2C_GENERATE_START_WRITE);
+			LL_I2C_HandleTransfer(i2c_instance[device_], address, LL_I2C_ADDRSLAVE_7BIT, op.tx_size,
+								  LL_I2C_MODE_SOFTEND, LL_I2C_GENERATE_START_WRITE);
 			break;
 		}
 		case embvm::i2c::operation::read: {
-			enableDMARx(rx_channel_, i2c_inst, op.rx_buffer, op.tx_size);
-			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT,
-								  op.tx_size, LL_I2C_MODE_SOFTEND, LL_I2C_GENERATE_START_READ);
+			enableDMARx(rx_channel_, i2c_inst, op.rx_buffer, op.rx_size);
+			LL_I2C_HandleTransfer(i2c_instance[device_], address, LL_I2C_ADDRSLAVE_7BIT, op.tx_size,
+								  LL_I2C_MODE_SOFTEND, LL_I2C_GENERATE_START_READ);
 			break;
 		}
 		case embvm::i2c::operation::writeRead: {
@@ -471,7 +529,8 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 			// TODO: zero-bytes correct here?
 			// TODO: do we need to enable LL_I2C_EnableIT_ADDR, at least for ping?? Need to disable
 			// somewhere too..
-			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT, 0,
+			assert(0);
+			LL_I2C_HandleTransfer(i2c_instance[device_], address, LL_I2C_ADDRSLAVE_7BIT, 0,
 								  LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_START_WRITE);
 			break;
 		}
@@ -479,16 +538,23 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 			// TODO?
 			// LL_I2C_GenerateStopCondition(i2c_inst);
 			// Instance, slave address, slave address size, transfer size, end mode, request);
-			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT, 0,
+			assert(0);
+			LL_I2C_HandleTransfer(i2c_instance[device_], address, LL_I2C_ADDRSLAVE_7BIT, 0,
 								  LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_STOP);
 			break;
 		}
 		case embvm::i2c::operation::restart: {
 			// TODO: does this work? Do we need to disable it? Should we use handle transfer?
+			assert(0);
 			LL_I2C_GenerateStartCondition(i2c_inst);
 			break;
 		}
 	}
+
+	while(!transfer_completed_ && !LL_I2C_IsActiveFlag_STOP(I2C3))
+		;
+
+	// TODO: this needs to return enqueued and handle things asynchronously... for now we block.
 
 	return status;
 }

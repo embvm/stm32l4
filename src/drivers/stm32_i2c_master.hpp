@@ -6,8 +6,8 @@
 #include <stm32_gpio.hpp>
 // TODO: #include <driver/hal_driver.hpp>
 
-// TODO: rename file to i2c master.hpp
 // TODO: Handle interrupt priority - as a constructor parameter
+// TODO: use HAL base class to support bottom-half interrupt handler registration
 
 /**
  *
@@ -20,8 +20,8 @@
  * STM32I2CMaster i2c2{STM32I2CMaster::device::i2c2, dma_ch_i2c_tx, dma_ch_i2c_rx};
  * @endcode
  *
- * The I2C driver will handle its specific configuration, address assignment, and
- * starting/stopping of the driver internally. You must, however, enable the appropriate
+ * The I2C driver will handle its specific configuration, address assignment, interrupt handlers,
+ * and starting/stopping of the driver internally. You must, however, enable the appropriate
  * DMA device clock in the hardware platform; the I2C driver will not handle that.
  *
  * @see STM32DMA
@@ -64,12 +64,15 @@ class STM32I2CMaster final : public embvm::i2c::master
 	embvm::i2c::status transfer_(const embvm::i2c::op_t& op,
 								 const embvm::i2c::master::cb_t& cb) noexcept final;
 	void configure_(embvm::i2c::pullups pullup) noexcept final;
-	void configure_i2c_pins_();
+	void configure_i2c_pins_() noexcept;
+	void configureDMA() noexcept;
 
   private:
 	const STM32I2CMaster::device device_;
 	STM32DMA& tx_channel_;
 	STM32DMA& rx_channel_;
+	// TODO: temporary, refactor out
+	bool transfer_completed_ = false;
 };
 
 #endif // STM32_I2C_HPP_
