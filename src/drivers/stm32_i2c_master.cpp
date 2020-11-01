@@ -434,8 +434,6 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 	auto i2c_inst = i2c_instance[device_];
 	assert(i2c_inst); // Instance is not valid if failed
 
-	assert(0); // TODO: NOT FINISHED
-
 	// TODO: handle transfers > 255 bytes using reload mode
 	assert(op.tx_size <= 255 && op.rx_size <= 255);
 
