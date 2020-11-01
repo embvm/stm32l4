@@ -75,8 +75,7 @@ class STM32DMA final : public embvm::DriverBase
 
 	enum channel : uint8_t
 	{
-		CH0 = 0,
-		CH1,
+		CH1 = 0,
 		CH2,
 		CH3,
 		CH4,
