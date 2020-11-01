@@ -2,12 +2,30 @@
 #define STM32_I2C_MASTER_HPP_
 
 #include <driver/i2c.hpp>
+#include <stm32_dma.hpp>
 #include <stm32_gpio.hpp>
 // TODO: #include <driver/hal_driver.hpp>
 
 // TODO: rename file to i2c master.hpp
 // TODO: Handle interrupt priority - as a constructor parameter
 
+/**
+ *
+ * Note that this class is implemented using DMA, so you need to create
+ * DMA instances for the tx_channel and rx_channel in order to use this driver.
+ *
+ * @code
+ * STM32DMA dma_ch_i2c_tx{STM32DMA::device::dma1, STM32DMA::channel::CH2};
+ * STM32DMA dma_ch_i2c_rx{STM32DMA::device::dma1, STM32DMA::channel::CH3};
+ * STM32I2CMaster i2c2{STM32I2CMaster::device::i2c2, dma_ch_i2c_tx, dma_ch_i2c_rx};
+ * @endcode
+ *
+ * The I2C driver will handle its specific configuration, address assignment, and
+ * starting/stopping of the driver internally. You must, however, enable the appropriate
+ * DMA device clock in the hardware platform; the I2C driver will not handle that.
+ *
+ * @see STM32DMA
+ */
 class STM32I2CMaster final : public embvm::i2c::master
 {
   public:
@@ -21,7 +39,11 @@ class STM32I2CMaster final : public embvm::i2c::master
 	};
 
   public:
-	STM32I2CMaster(STM32I2CMaster::device dev) noexcept : device_(dev) {}
+	explicit STM32I2CMaster(STM32I2CMaster::device dev, STM32DMA& tx_channel,
+							STM32DMA& rx_channel) noexcept
+		: device_(dev), tx_channel_(tx_channel), rx_channel_(rx_channel)
+	{
+	}
 	~STM32I2CMaster() noexcept = default;
 
 	void enableInterrupts() noexcept;
@@ -46,6 +68,8 @@ class STM32I2CMaster final : public embvm::i2c::master
 
   private:
 	const STM32I2CMaster::device device_;
+	STM32DMA& tx_channel_;
+	STM32DMA& rx_channel_;
 };
 
 #endif // STM32_I2C_HPP_

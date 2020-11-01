@@ -3,7 +3,9 @@
 #include <cassert>
 #include <driver/gpio.hpp> // for embvm::gpio::port
 #include <nvic.hpp>
+#include <processor_includes.hpp>
 #include <stm32_rcc.hpp>
+#include <stm32l4xx_ll_dma.h> // For configuration of DMA channel; TODO: break dependency
 #include <stm32l4xx_ll_gpio.h> // TODO: break dependency
 #include <stm32l4xx_ll_i2c.h>
 
@@ -35,14 +37,7 @@
  *     Interrupt is generated if enabled, and TCR flag is set.
  */
 
-extern "C" void I2C1_ER_IRQHandler(void);
-extern "C" void I2C1_EV_IRQHandler(void);
-extern "C" void I2C2_ER_IRQHandler(void);
-extern "C" void I2C2_EV_IRQHandler(void);
-extern "C" void I2C3_ER_IRQHandler(void);
-extern "C" void I2C3_EV_IRQHandler(void);
-extern "C" void I2C4_ER_IRQHandler(void);
-extern "C" void I2C4_EV_IRQHandler(void);
+#pragma mark - Types and Declarations -
 
 struct STM32_I2C_Pins_t
 {
@@ -105,8 +100,13 @@ constexpr std::array<STM32_I2C_Pins_t, 4> i2c_pins =
 };
 // clang-format on
 
-// I2C4 not supported
-constexpr std::array<I2C_TypeDef* const, 4> i2c_instance = {I2C1, I2C2, I2C3, nullptr};
+constexpr std::array<I2C_TypeDef* const, 4> i2c_instance = {I2C1, I2C2, I2C3, I2C4};
+
+constexpr std::array<uint32_t, 4> dma_tx_routing = {LL_DMAMUX_REQ_I2C1_TX, LL_DMAMUX_REQ_I2C2_TX,
+													LL_DMAMUX_REQ_I2C3_TX, LL_DMAMUX_REQ_I2C4_TX};
+
+constexpr std::array<uint32_t, 4> dma_rx_routing = {LL_DMAMUX_REQ_I2C1_RX, LL_DMAMUX_REQ_I2C2_RX,
+													LL_DMAMUX_REQ_I2C3_RX, LL_DMAMUX_REQ_I2C4_RX};
 
 // TODO:
 // static std::array<embvm::timer::cb_t, 9> i2c_callbacks = {nullptr};
@@ -116,6 +116,17 @@ constexpr std::array<uint8_t, 4> event_irq_num = {I2C1_EV_IRQn, I2C2_EV_IRQn, I2
 
 constexpr std::array<uint8_t, 4> error_irq_num = {I2C1_ER_IRQn, I2C2_ER_IRQn, I2C3_ER_IRQn,
 												  I2C4_ER_IRQn};
+
+#pragma mark - Interrupt Handlers -
+
+extern "C" void I2C1_ER_IRQHandler(void);
+extern "C" void I2C1_EV_IRQHandler(void);
+extern "C" void I2C2_ER_IRQHandler(void);
+extern "C" void I2C2_EV_IRQHandler(void);
+extern "C" void I2C3_ER_IRQHandler(void);
+extern "C" void I2C3_EV_IRQHandler(void);
+extern "C" void I2C4_ER_IRQHandler(void);
+extern "C" void I2C4_EV_IRQHandler(void);
 
 static void i2c_error_handler(STM32I2CMaster::device dev)
 {
@@ -167,10 +178,44 @@ void I2C4_EV_IRQHandler()
 	i2c_event_handler(STM32I2CMaster::device::i2c4);
 }
 
+#pragma mark - Helpers -
+
+static inline void enableDMATx(STM32DMA& ch_, I2C_TypeDef* inst, const uint8_t* buffer, size_t size)
+{
+	ch_.setAddresses(
+		const_cast<uint8_t*>(
+			buffer), // This is frowned upon, but the underlying STM32 code doesn't take const.
+		reinterpret_cast<uint32_t*>(LL_I2C_DMA_GetRegAddr(inst, LL_I2C_DMA_REG_DATA_TRANSMIT)),
+		size);
+	ch_.enable();
+}
+
+static inline void enableDMARx(STM32DMA& ch_, I2C_TypeDef* inst, uint8_t* const buffer, size_t size)
+{
+	ch_.setAddresses(
+		reinterpret_cast<uint32_t*>(LL_I2C_DMA_GetRegAddr(inst, LL_I2C_DMA_REG_DATA_RECEIVE)),
+		buffer, size);
+	ch_.enable();
+}
+
+#pragma mark - Driver APIs -
+
 // TODO: need to control fast vs slow mode
 // currently configured for fast mode
 // This value is seriously hard-coded??? I2C_TIMING
 #if 0
+
+  /* Configure the SDA setup, hold time and the SCL high, low period */
+  /* Timing register value is computed with the STM32CubeMX Tool,
+    * Fast Mode @400kHz with I2CCLK = 80 MHz,
+    * rise time = 100ns, fall time = 10ns
+    * Timing Value = (uint32_t)0x00F02B86
+    */
+  timing = __LL_I2C_CONVERT_TIMINGS(0x0, 0xF, 0x0, 0x2B, 0x86);
+  LL_I2C_SetTiming(I2C1, timing);
+
+
+
 /* Timing register value is computed with the STM32CubeMX Tool,
   * Fast Mode @400kHz with I2CCLK = 80 MHz,
   * rise time = 100ns, fall time = 10ns
@@ -281,6 +326,17 @@ void STM32I2CMaster::start_() noexcept
 		.OwnAddrSize = LL_I2C_OWNADDRESS1_7BIT,
 	};
 
+	tx_channel_.setConfiguration(LL_DMA_DIRECTION_MEMORY_TO_PERIPH | LL_DMA_PRIORITY_HIGH |
+									 LL_DMA_MODE_NORMAL | LL_DMA_PERIPH_NOINCREMENT |
+									 LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
+									 LL_DMA_MDATAALIGN_BYTE,
+								 dma_tx_routing[device_]);
+	rx_channel_.setConfiguration(LL_DMA_DIRECTION_PERIPH_TO_MEMORY | LL_DMA_PRIORITY_HIGH |
+									 LL_DMA_MODE_NORMAL | LL_DMA_PERIPH_NOINCREMENT |
+									 LL_DMA_MEMORY_INCREMENT | LL_DMA_PDATAALIGN_BYTE |
+									 LL_DMA_MDATAALIGN_BYTE,
+								 dma_rx_routing[device_]);
+
 	LL_I2C_EnableDMAReq_RX(i2c_inst);
 	LL_I2C_EnableDMAReq_TX(i2c_inst);
 
@@ -389,17 +445,20 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 		case embvm::i2c::operation::write: {
 			// TODO: is this case really separated, because continue write I don't want to generate
 			// a start? Or is it fine?
+			enableDMATx(tx_channel_, i2c_inst, op.tx_buffer, op.tx_size);
 			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT,
 								  op.tx_size, LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_START_WRITE);
 			break;
 		}
 		case embvm::i2c::operation::writeNoStop:
 		case embvm::i2c::operation::continueWriteNoStop: {
+			enableDMATx(tx_channel_, i2c_inst, op.tx_buffer, op.tx_size);
 			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT,
 								  op.tx_size, LL_I2C_MODE_SOFTEND, LL_I2C_GENERATE_START_WRITE);
 			break;
 		}
 		case embvm::i2c::operation::read: {
+			enableDMARx(rx_channel_, i2c_inst, op.rx_buffer, op.tx_size);
 			LL_I2C_HandleTransfer(i2c_instance[device_], op.address, LL_I2C_ADDRSLAVE_7BIT,
 								  op.tx_size, LL_I2C_MODE_SOFTEND, LL_I2C_GENERATE_START_READ);
 			break;
@@ -433,250 +492,10 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 		}
 	}
 
-	// TODO: how to set status?
-
-	// Non-dma, we have:
-	// void LL_I2C_TransmitData8(I2C_TypeDef *I2Cx, uint8_t Data)
-	// uint8_t LL_I2C_ReceiveData8(I2C_TypeDef *I2Cx)
-
 	return status;
 }
 
-void STM32I2CMaster::configure_(embvm::i2c::pullups pullup) {}
-
-#if 0
-/**
-  * @brief  This Function handle Master events to perform a transmission process
-  * @note  This function is composed in different steps :
-  *        -1- Configure DMA parameters for Command Code transfer.
-  *        -2- Enable DMA transfer.
-  *        -3- Initiate a Start condition to the Slave device.
-  *        -4- Loop until end of DMA transfer completed (DMA TC raised).
-  *        -5- Loop until end of master transfer completed (STOP flag raised).
-  *        -6- Clear pending flags, Data Command Code are checking into Slave process.
-  * @param  None
-  * @retval None
-  */
-void Handle_I2C_Master_Transmit(void)
+void STM32I2CMaster::configure_(embvm::i2c::pullups pullup)
 {
-  /* (1) Configure DMA parameters for Command Code transfer *******************/
-  pMasterTransmitBuffer    = (uint32_t*)(&aCommandCode[ubMasterCommandIndex][0]);
-  ubMasterNbDataToTransmit = strlen((char *)pMasterTransmitBuffer[0]);
-
-  LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_2, (uint32_t)(*pMasterTransmitBuffer));
-  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, ubMasterNbDataToTransmit);
-
-  /* (2) Enable DMA transfer **************************************************/
-  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
-
-  /* (3) Initiate a Start condition to the Slave device ***********************/
-
-  /* Master Generate Start condition for a write request:
-   *  - to the Slave with a 7-Bit SLAVE_OWN_ADDRESS
-   *  - with a auto stop condition generation when transmit all bytes
-   *  - No specific answer is needed from Slave Device, configure auto-stop condition
-   */
-  LL_I2C_HandleTransfer(I2C3, SLAVE_OWN_ADDRESS, LL_I2C_ADDRSLAVE_7BIT, ubMasterNbDataToTransmit, LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_START_WRITE);
-
-  /* (4) Loop until end of transfer completed (DMA TC raised) *****************/
-
-#if(USE_TIMEOUT == 1)
-  Timeout = DMA_SEND_TIMEOUT_TC_MS;
-#endif /* USE_TIMEOUT */
-
-  /* Loop until DMA transfer complete event */
-  while(!ubMasterTransferComplete)
-  {
-#if(USE_TIMEOUT == 1)
-    /* Check Systick counter flag to decrement the time-out value */
-    if (LL_SYSTICK_IsActiveCounterFlag())
-    {
-      if(Timeout-- == 0)
-      {
-        /* Time-out occurred. Set LED to blinking mode */
-        LED_Blinking(LED_BLINK_SLOW);
-      }
-    }
-#endif /* USE_TIMEOUT */
-  }
-
-  /* (5) Loop until end of master process completed (STOP flag raised) ********/
-#if(USE_TIMEOUT == 1)
-  Timeout = I2C_SEND_TIMEOUT_STOP_MS;
-#endif /* USE_TIMEOUT */
-
-  /* Loop until STOP flag is raised  */
-  while(!LL_I2C_IsActiveFlag_STOP(I2C3))
-  {
-#if(USE_TIMEOUT == 1)
-    /* Check Systick counter flag to decrement the time-out value */
-    if (LL_SYSTICK_IsActiveCounterFlag())
-    {
-      if(Timeout-- == 0)
-      {
-        /* Time-out occurred. Set LED2 to blinking mode */
-        LED_Blinking(LED_BLINK_SLOW);
-      }
-    }
-#endif /* USE_TIMEOUT */
-  }
-
-  /* (6) Clear pending flags, Data Command Code are checking into Slave process */
-  /* End of Master Process */
-  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
-  LL_I2C_ClearFlag_STOP(I2C3);
-
-  /* Display through external Terminal IO the Slave Answer received */
-  printf("%s : %s\n\r", (char*)(aCommandCode[ubMasterCommandIndex][0]), (char*)aMasterReceiveBuffer);
-
-  /* Turn LED2 On */
-  /* Master sequence completed successfully*/
-  LED_On();
-  /* Keep LED2 On, 500 MilliSeconds */
-  LL_mDelay(500);
-  LED_Off();
-
-  /* Clear and Reset process variables and arrays */
-  ubMasterTransferComplete = 0;
-  ubMasterNbDataToTransmit = 0;
-  ubMasterReceiveIndex     = 0;
-  FlushBuffer8(aMasterReceiveBuffer);
+	assert(0); // TODO:
 }
-
-/**
-  * @brief  This Function handle Master events to perform a transmission then a reception process
-  * @note   This function is composed in different steps :
-  *         -1- Configure DMA parameters for Command Code transfer.
-  *         -2- Enable DMA transfer.
-  *         -3- Initiate a Start condition to the Slave device.
-  *         -4- Loop until end of DMA transfer completed (DMA TC raised).
-  *         -5- Loop until end of master transfer completed (TC flag raised).
-  *         -6- Configure DMA to receive data from slave.
-  *         -7- Initiate a ReStart condition to the Slave device.
-  *         -8- Loop until end of master process completed (STOP flag raised).
-  *         -9- Clear pending flags, Data Command Code are checking into Slave process.
-  * @param  None
-  * @retval None
-  */
-void Handle_I2C_Master_TransmitReceive(void)
-{
-  /* (1) Configure DMA parameters for Command Code transfer *******************/
-  pMasterTransmitBuffer    = (uint32_t*)(&aCommandCode[ubMasterCommandIndex][0]);
-  ubMasterNbDataToTransmit = strlen((char *)pMasterTransmitBuffer[0]);
-
-  LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_2, (uint32_t)(*pMasterTransmitBuffer));
-  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, ubMasterNbDataToTransmit);
-
-  /* (2) Enable DMA transfer **************************************************/
-  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
-
-  /* (3) Initiate a Start condition to the Slave device ***********************/
-
-  /* Master Generate Start condition for a write request:
-   *  - to the Slave with a 7-Bit SLAVE_OWN_ADDRESS
-   *  - with a no stop condition generation when transmit all bytes
-   *  - A specific answer is needed from Slave Device, configure no-stop condition
-   */
-  LL_I2C_HandleTransfer(I2C3, SLAVE_OWN_ADDRESS, LL_I2C_ADDRSLAVE_7BIT, ubMasterNbDataToTransmit, LL_I2C_MODE_SOFTEND, LL_I2C_GENERATE_START_WRITE);
-
-  /* (4) Loop until end of transfer completed (DMA TC raised) *****************/
-
-#if(USE_TIMEOUT == 1)
-  Timeout = DMA_SEND_TIMEOUT_TC_MS;
-#endif /* USE_TIMEOUT */
-
-  /* Loop until DMA transfer complete event */
-  while(!ubMasterTransferComplete)
-  {
-#if(USE_TIMEOUT == 1)
-    /* Check Systick counter flag to decrement the time-out value */
-    if (LL_SYSTICK_IsActiveCounterFlag())
-    {
-      if(Timeout-- == 0)
-      {
-        /* Time-out occurred. Set LED to blinking mode */
-        LED_Blinking(LED_BLINK_SLOW);
-      }
-    }
-#endif /* USE_TIMEOUT */
-  }
-
-  /* Reset ubMasterTransferComplete flag */
-  ubMasterTransferComplete = 0;
-
-  /* (5) Loop until end of master transfer completed (TC flag raised) *********/
-  /* Wait Master Transfer completed */
-#if(USE_TIMEOUT == 1)
-  Timeout = I2C_SEND_TIMEOUT_TC_MS;
-#endif /* USE_TIMEOUT */
-
-  while(LL_I2C_IsActiveFlag_TC(I2C3) != 1)
-  {
-#if(USE_TIMEOUT == 1)
-    /* Check Systick counter flag to decrement the time-out value */
-    if (LL_SYSTICK_IsActiveCounterFlag())
-    {
-      if(Timeout-- == 0)
-      {
-        /* Time-out occurred. Set LED to blinking mode */
-        LED_Blinking(LED_BLINK_SLOW);
-      }
-    }
-#endif /* USE_TIMEOUT */
-  }
-
-  /* (6) Configure DMA to receive data from slave *****************************/
-  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
-  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, ubMasterNbDataToReceive);
-  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
-
-  /* (7) Initiate a ReStart condition to the Slave device *********************/
-  /* Master Generate Start condition for a write request:
-   *    - to the Slave with a 7-Bit SLAVE_OWN_ADDRESS
-   *    - with a auto stop condition generation when transmit all bytes
-   */
-  LL_I2C_HandleTransfer(I2C3, SLAVE_OWN_ADDRESS, LL_I2C_ADDRSLAVE_7BIT, ubMasterNbDataToReceive, LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_RESTART_7BIT_READ);
-
-  /* (8) Loop until end of master process completed (STOP flag raised) ********/
-#if(USE_TIMEOUT == 1)
-  Timeout = I2C_SEND_TIMEOUT_STOP_MS;
-#endif /* USE_TIMEOUT */
-
-  /* Loop until STOP flag is raised  */
-  while(!LL_I2C_IsActiveFlag_STOP(I2C3))
-  {
-#if(USE_TIMEOUT == 1)
-    /* Check Systick counter flag to decrement the time-out value */
-    if (LL_SYSTICK_IsActiveCounterFlag())
-    {
-      if(Timeout-- == 0)
-      {
-        /* Time-out occurred. Set LED2 to blinking mode */
-        LED_Blinking(LED_BLINK_SLOW);
-      }
-    }
-#endif /* USE_TIMEOUT */
-  }
-
-  /* (9) Clear pending flags, Data Command Code are checking into Slave process */
-  /* End of Master Process */
-  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
-  LL_I2C_ClearFlag_STOP(I2C3);
-
-  /* Display through external Terminal IO the Slave Answer received */
-  printf("%s : %s\n\r", (char*)(aCommandCode[ubMasterCommandIndex][0]), (char*)aMasterReceiveBuffer);
-
-  /* Turn LED2 On */
-  /* Master sequence completed successfully*/
-  LED_On();
-  /* Keep LED2 On, 500 MilliSeconds */
-  LL_mDelay(500);
-  LED_Off();
-
-  /* Clear and Reset process variables and arrays */
-  ubMasterTransferComplete = 0;
-  ubMasterNbDataToTransmit = 0;
-  ubMasterReceiveIndex     = 0;
-  FlushBuffer8(aMasterReceiveBuffer);
-}
-#endif
