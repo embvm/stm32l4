@@ -13,6 +13,7 @@ constexpr std::array<unsigned, 9> gpio_enable_bits = {
 	RCC_AHB2ENR_GPIODEN, RCC_AHB2ENR_GPIOEEN, RCC_AHB2ENR_GPIOFEN,
 	RCC_AHB2ENR_GPIOGEN, RCC_AHB2ENR_GPIOHEN, RCC_AHB2ENR_GPIOIEN};
 
+// TODO: fix this, use an enum instead so we don't have to waste a slot
 // CH0 is not valid for STM32 timers
 constexpr std::array<volatile uint32_t* const, 9> timer_enable_reg = {
 	nullptr,		&RCC->AHB2ENR,	&RCC->APB1ENR1, &RCC->APB1ENR1, &RCC->APB1ENR1,
@@ -29,9 +30,10 @@ constexpr std::array<unsigned, 9> timer_enable_bits = {0,
 													   RCC_APB1ENR1_TIM7EN,
 													   RCC_APB2ENR_TIM8EN_Pos};
 
-// I2C4 is not supported on this device
+constexpr std::array<volatile uint32_t* const, 4> i2c_enable_reg = {&RCC->APB1ENR1, &RCC->APB1ENR1,
+																	&RCC->APB1ENR1, &RCC->AHB2ENR};
 constexpr std::array<unsigned, 4> i2c_enable_bits = {RCC_APB1ENR1_I2C1EN, RCC_APB1ENR1_I2C2EN,
-													 RCC_APB1ENR1_I2C3EN, 0};
+													 RCC_APB1ENR1_I2C3EN, RCC_APB1ENR2_I2C4EN};
 
 // TODO: should we have a way to select other clocks? Or just enforce sysclock for now?
 constexpr std::array<unsigned, 4> i2c_clock_source = {
@@ -76,17 +78,21 @@ void STM32ClockControl::timerDisable(embvm::timer::channel timer) noexcept
 
 void STM32ClockControl::i2cEnable(uint8_t device) noexcept
 {
-	uint32_t val = embutil::volatile_load(&RCC->AHB1ENR);
+	volatile uint32_t* const reg = i2c_enable_reg[device];
+	assert(reg);
+	uint32_t val = embutil::volatile_load(reg);
 	val |= i2c_enable_bits[device];
-	embutil::volatile_store(&RCC->AHB1ENR, val);
+	embutil::volatile_store(reg, val);
 	LL_RCC_SetI2CClockSource(i2c_clock_source[device]);
 }
 
 void STM32ClockControl::i2cDisable(uint8_t device) noexcept
 {
-	uint32_t val = embutil::volatile_load(&RCC->AHB1ENR);
+	volatile uint32_t* const reg = i2c_enable_reg[device];
+	assert(reg);
+	uint32_t val = embutil::volatile_load(reg);
 	val |= i2c_enable_bits[device];
-	embutil::volatile_store(&RCC->AHB1ENR, val);
+	embutil::volatile_store(reg, val);
 }
 
 void STM32ClockControl::dmaEnable(uint8_t device) noexcept
