@@ -49,7 +49,7 @@ class NucleoL4R5ZI_HWPlatform : public embvm::VirtualHwPlatformBase<NucleoL4R5ZI
 
 	STM32DMA dma_ch_i2c_tx{STM32DMA::device::dma1, STM32DMA::channel::CH2};
 	STM32DMA dma_ch_i2c_rx{STM32DMA::device::dma1, STM32DMA::channel::CH3};
-	STM32I2CMaster i2c2{STM32I2CMaster::device::i2c2};
+	STM32I2CMaster i2c2{STM32I2CMaster::device::i2c2, dma_ch_i2c_tx, dma_ch_i2c_rx};
 };
 
 #if 0
