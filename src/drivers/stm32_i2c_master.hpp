@@ -11,6 +11,8 @@
 
 /**
  *
+ * The current implementation does not support SMBus.
+ *
  * Note that this class is implemented using DMA, so you need to create
  * DMA instances for the tx_channel and rx_channel in order to use this driver.
  *

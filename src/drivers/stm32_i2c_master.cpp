@@ -37,6 +37,10 @@
  *     Interrupt is generated if enabled, and TCR flag is set.
  */
 
+#pragma mark - Definitions -
+
+constexpr size_t MAX_I2C_TRANSFER_SIZE_BYTES = 255;
+
 #pragma mark - Types and Declarations -
 
 struct STM32_I2C_Pins_t
@@ -117,6 +121,98 @@ constexpr std::array<uint8_t, 4> event_irq_num = {I2C1_EV_IRQn, I2C2_EV_IRQn, I2
 constexpr std::array<uint8_t, 4> error_irq_num = {I2C1_ER_IRQn, I2C2_ER_IRQn, I2C3_ER_IRQn,
 												  I2C4_ER_IRQn};
 
+static std::array<size_t, 4> transfer_reload_size = {0};
+static std::array<bool, 4> transfer_reload_autoend = {false};
+
+#pragma mark - Helpers -
+
+static inline void enableDMATx(STM32DMA& ch_, I2C_TypeDef* inst, const uint8_t* buffer, size_t size)
+{
+	ch_.setAddresses(
+		const_cast<uint8_t*>(
+			buffer), // This is frowned upon, but the underlying STM32 code doesn't take const.
+		reinterpret_cast<uint32_t*>(LL_I2C_DMA_GetRegAddr(inst, LL_I2C_DMA_REG_DATA_TRANSMIT)),
+		size);
+	ch_.enable();
+}
+
+static inline void enableDMARx(STM32DMA& ch_, I2C_TypeDef* inst, uint8_t* const buffer, size_t size)
+{
+	ch_.setAddresses(
+		reinterpret_cast<uint32_t*>(LL_I2C_DMA_GetRegAddr(inst, LL_I2C_DMA_REG_DATA_RECEIVE)),
+		buffer, size);
+	ch_.enable();
+}
+
+/** Check and adjust transfer size to handle transfers > 255 bytes
+ *
+ * @precondition op_buffer_size > 0
+ * @param [in] op_buffer_size The size of the TX or RX buffer as specified in the op request
+ * @param [inout] bytes_remaining The value of the bytes remaining in additional transfers.
+ *	This parameter will be non-zero when
+ * @param [in] desired_end_mode The end mode that you want to set if the transfer size is within
+ *	limits for a single transfer.
+ * @returns A std::tuple containing:
+ *	1. the active transfer size in bytes (size_t)
+ *	2. the adjusted end mode (uint32_t)
+ *		If the transfer size is > 255 bytes, then the end mode will be set to LL_I2C_MODE_RELOAD,
+ *		otherwise it will be set to desired_end_mode.
+ *
+ * @note This function needs to be modified to support SMBus, beacuse the SMBus modes are not
+ * considered here, especially for the autoend value.
+ */
+static std::tuple<size_t, uint32_t> check_and_adjust_transfer_size(const STM32I2CMaster::device dev,
+																   const uint32_t& op_buffer_size,
+																   uint32_t desired_end_mode)
+{
+	uint32_t bytes_for_immediate_transfer;
+	uint32_t actual_end_mode;
+
+	if(op_buffer_size > MAX_I2C_TRANSFER_SIZE_BYTES)
+	{
+		transfer_reload_size[dev] = op_buffer_size - MAX_I2C_TRANSFER_SIZE_BYTES;
+		bytes_for_immediate_transfer = MAX_I2C_TRANSFER_SIZE_BYTES;
+		actual_end_mode = LL_I2C_MODE_RELOAD;
+		transfer_reload_autoend[dev] = (desired_end_mode == LL_I2C_MODE_AUTOEND);
+	}
+	else
+	{
+		bytes_for_immediate_transfer = op_buffer_size;
+		transfer_reload_size[dev] = 0;
+		actual_end_mode = desired_end_mode;
+		transfer_reload_autoend[dev] = false;
+	}
+
+	return {bytes_for_immediate_transfer, actual_end_mode};
+}
+
+/**
+ *
+ * @param [in] dev The device ID, which is used for accessing the arrays
+ * @param [in] inst The device instance, which saves us a dereference + assert since
+ * 	we've already checked this in the caller's context.
+ */
+static void transfer_reload_or_end(const STM32I2CMaster::device dev, I2C_TypeDef* const inst)
+{
+	auto size = transfer_reload_size[dev];
+	if(size > MAX_I2C_TRANSFER_SIZE_BYTES)
+	{
+		transfer_reload_size[dev] = size - MAX_I2C_TRANSFER_SIZE_BYTES;
+		size = MAX_I2C_TRANSFER_SIZE_BYTES;
+		LL_I2C_SetTransferSize(inst, size);
+	}
+	else if(size == 0)
+	{
+		// Check auto-end logic
+		LL_I2C_DisableReloadMode(inst);
+		LL_I2C_GenerateStopCondition(inst);
+	}
+	else
+	{
+		LL_I2C_SetTransferSize(inst, size);
+	}
+}
+
 #pragma mark - Interrupt Handlers -
 
 extern "C" void I2C1_ER_IRQHandler(void);
@@ -130,6 +226,7 @@ extern "C" void I2C4_EV_IRQHandler(void);
 
 static void i2c_error_handler(STM32I2CMaster::device dev)
 {
+	(void)dev;
 	assert(0); // TODO: Handle error
 }
 
@@ -138,9 +235,9 @@ static void i2c_event_handler(STM32I2CMaster::device dev)
 	auto inst = i2c_instance[dev];
 	assert(inst); // invalid instance
 
-	if(LL_I2C_IsActiveFlag_RXNE(inst))
+	if(LL_I2C_IsActiveFlag_TCR(inst))
 	{
-		// TODO: RX callback
+		transfer_reload_or_end(dev, inst);
 	}
 	else if(LL_I2C_IsActiveFlag_STOP(inst))
 	{
@@ -188,26 +285,6 @@ void I2C4_ER_IRQHandler()
 void I2C4_EV_IRQHandler()
 {
 	i2c_event_handler(STM32I2CMaster::device::i2c4);
-}
-
-#pragma mark - Helpers -
-
-static inline void enableDMATx(STM32DMA& ch_, I2C_TypeDef* inst, const uint8_t* buffer, size_t size)
-{
-	ch_.setAddresses(
-		const_cast<uint8_t*>(
-			buffer), // This is frowned upon, but the underlying STM32 code doesn't take const.
-		reinterpret_cast<uint32_t*>(LL_I2C_DMA_GetRegAddr(inst, LL_I2C_DMA_REG_DATA_TRANSMIT)),
-		size);
-	ch_.enable();
-}
-
-static inline void enableDMARx(STM32DMA& ch_, I2C_TypeDef* inst, uint8_t* const buffer, size_t size)
-{
-	ch_.setAddresses(
-		reinterpret_cast<uint32_t*>(LL_I2C_DMA_GetRegAddr(inst, LL_I2C_DMA_REG_DATA_RECEIVE)),
-		buffer, size);
-	ch_.enable();
 }
 
 #pragma mark - Driver APIs -
@@ -387,7 +464,7 @@ void STM32I2CMaster::configureDMA() noexcept
 	tx_channel_.registerCallback([this](STM32DMA::status status) {
 		if(status == STM32DMA::status::ok)
 		{
-			tx_channel_.disable();
+			// TODO: proper to do this here? tx_channel_.disable();
 			transfer_completed_ = true;
 		}
 		else
@@ -399,7 +476,7 @@ void STM32I2CMaster::configureDMA() noexcept
 	rx_channel_.registerCallback([this](STM32DMA::status status) {
 		if(status == STM32DMA::status::ok)
 		{
-			rx_channel_.disable();
+			/// TODO: proper to do this here? rx_channel_.disable();
 			transfer_completed_ = true;
 		}
 		else
@@ -457,8 +534,9 @@ void STM32I2CMaster::enableInterrupts() noexcept
 	// LL_I2C_EnableIT_TX(inst);
 	// LL_I2C_EnableIT_RX(inst);
 	LL_I2C_EnableIT_NACK(inst);
-	LL_I2C_EnableIT_ERR(inst);
+	LL_I2C_EnableIT_ERR(inst); // Enables Arbitration loss, Bus error, overrun/underrun errors
 	LL_I2C_EnableIT_STOP(inst);
+	LL_I2C_EnableIT_TC(inst); // Enables both transfer complete and transfer complete reload
 }
 
 void STM32I2CMaster::disableInterrupts() noexcept
@@ -474,6 +552,7 @@ void STM32I2CMaster::disableInterrupts() noexcept
 	LL_I2C_DisableIT_NACK(inst);
 	LL_I2C_DisableIT_ERR(inst);
 	LL_I2C_DisableIT_STOP(inst);
+	LL_I2C_DisableIT_TC(inst);
 	NVICControl::disable(error_irq);
 	NVICControl::disable(event_irq);
 }
@@ -485,38 +564,59 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 	auto status = embvm::i2c::status::ok;
 	auto i2c_inst = i2c_instance[device_];
 	assert(i2c_inst); // Instance is not valid if failed
+	uint32_t generate_mode = LL_I2C_GENERATE_STOP;
+	uint32_t end_mode = LL_I2C_MODE_AUTOEND;
+	uint32_t transfer_size = 0;
 
 	// Note that the STM32 calls don't shift the address for us, so we need
 	// to do this manually.
-	uint32_t address = op.address << UINT32_C(1);
-
-	// TODO: handle transfers > 255 bytes using reload mode
-	assert(op.tx_size <= 255 && op.rx_size <= 255);
+	uint32_t address = static_cast<uint32_t>(op.address << 1);
 
 	transfer_completed_ = false;
 
+	/** A Note on Large Transfers (> 255 bytes)
+	 *
+	 * For large transfers, we need to use the "reload" capability to ensure that the Transfer
+	 * Complete Reload (TCR) flag/interrupt will fire. After the programmed number of bytes has been
+	 * transferred, you'll get an interrupt. The additional number of bytes to be transferred is
+	 * programmed, the TCR bit is set once more, and then the data transfer will resume.
+	 *
+	 * Note that when RELOAD is set, AUTOEND has no effect. We need to STOP the transfer manually.
+	 *
+	 * To handle this logic, use the check_and_adjust_transfer_size() function, which will set
+	 * variables that are accessible in an interrupt context and can be used for handling these
+	 * large transfers without necessary intervention on your part.
+	 *
+	 * Also note that since the DMA block can handle sizes > 255, we will pass the full
+	 * buffer size to the enableDMATx/Rx functions.
+	 */
 	switch(op.op)
 	{
 		case embvm::i2c::operation::continueWriteStop:
 		case embvm::i2c::operation::write: {
 			// TODO: is this case really separated, because continue write I don't want to generate
-			// a start? Or is it fine?
+			// a start? Or is it fine? I think I might need to separate them for a different
+			// behavior - e.g. GENERATE_NOSTARTSTOP + AutoEnd?
+			std::tie(transfer_size, end_mode) =
+				check_and_adjust_transfer_size(device_, op.tx_size, LL_I2C_MODE_AUTOEND);
+			generate_mode = LL_I2C_GENERATE_START_WRITE;
 			enableDMATx(tx_channel_, i2c_inst, op.tx_buffer, op.tx_size);
-			LL_I2C_HandleTransfer(i2c_instance[device_], address, LL_I2C_ADDRSLAVE_7BIT, op.tx_size,
-								  LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_START_WRITE);
 			break;
 		}
 		case embvm::i2c::operation::writeNoStop:
 		case embvm::i2c::operation::continueWriteNoStop: {
+			std::tie(transfer_size, end_mode) =
+				check_and_adjust_transfer_size(device_, op.tx_size, LL_I2C_MODE_SOFTEND);
+			// TODO: for continue, does this need to be separated as a case?
+			generate_mode = LL_I2C_GENERATE_START_WRITE;
 			enableDMATx(tx_channel_, i2c_inst, op.tx_buffer, op.tx_size);
-			LL_I2C_HandleTransfer(i2c_instance[device_], address, LL_I2C_ADDRSLAVE_7BIT, op.tx_size,
-								  LL_I2C_MODE_SOFTEND, LL_I2C_GENERATE_START_WRITE);
 			break;
 		}
 		case embvm::i2c::operation::read: {
+			std::tie(transfer_size, end_mode) =
+				check_and_adjust_transfer_size(device_, op.tx_size, LL_I2C_MODE_AUTOEND);
+			generate_mode = LL_I2C_GENERATE_START_READ;
 			enableDMARx(rx_channel_, i2c_inst, op.rx_buffer, op.rx_size);
-			LL_I2C_HandleTransfer(i2c_instance[device_], address, LL_I2C_ADDRSLAVE_7BIT, op.tx_size,
-								  LL_I2C_MODE_SOFTEND, LL_I2C_GENERATE_START_READ);
 			break;
 		}
 		case embvm::i2c::operation::writeRead: {
@@ -530,8 +630,9 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 			// TODO: do we need to enable LL_I2C_EnableIT_ADDR, at least for ping?? Need to disable
 			// somewhere too..
 			assert(0);
-			LL_I2C_HandleTransfer(i2c_instance[device_], address, LL_I2C_ADDRSLAVE_7BIT, 0,
-								  LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_START_WRITE);
+			transfer_size = 0;
+			end_mode = LL_I2C_MODE_AUTOEND;
+			generate_mode = LL_I2C_GENERATE_START_WRITE;
 			break;
 		}
 		case embvm::i2c::operation::stop: {
@@ -539,22 +640,32 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 			// LL_I2C_GenerateStopCondition(i2c_inst);
 			// Instance, slave address, slave address size, transfer size, end mode, request);
 			assert(0);
-			LL_I2C_HandleTransfer(i2c_instance[device_], address, LL_I2C_ADDRSLAVE_7BIT, 0,
-								  LL_I2C_MODE_AUTOEND, LL_I2C_GENERATE_STOP);
+			transfer_size = 0;
+			end_mode = LL_I2C_MODE_AUTOEND;
+			generate_mode = LL_I2C_GENERATE_STOP;
 			break;
 		}
 		case embvm::i2c::operation::restart: {
-			// TODO: does this work? Do we need to disable it? Should we use handle transfer?
+			// TODO: does this work?
 			assert(0);
-			LL_I2C_GenerateStartCondition(i2c_inst);
+			transfer_size = 0;
+			end_mode = LL_I2C_MODE_SOFTEND;
+			generate_mode = LL_I2C_GENERATE_RESTART_7BIT_WRITE;
 			break;
 		}
 	}
 
-	while(!transfer_completed_ && !LL_I2C_IsActiveFlag_STOP(I2C3))
-		;
+	LL_I2C_HandleTransfer(i2c_inst, address, LL_I2C_ADDRSLAVE_7BIT, transfer_size, end_mode,
+						  generate_mode);
 
 	// TODO: this needs to return enqueued and handle things asynchronously... for now we block.
+	while(!transfer_completed_ && !LL_I2C_IsActiveFlag_STOP(i2c_inst))
+		;
+
+	// TODO: this doesn't belong here, but the method of disabling the channel during the interrupt
+	// Was not reliable and was causing assert failures in setAddresses
+	// We need a more reliable method... I2C transfer done?
+	tx_channel_.disable();
 
 	return status;
 }
