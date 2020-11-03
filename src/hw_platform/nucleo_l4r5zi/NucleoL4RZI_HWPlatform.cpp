@@ -6,8 +6,8 @@
 NucleoL4R5ZI_HWPlatform::NucleoL4R5ZI_HWPlatform() noexcept
 {
 	registerDriver("led1", &led1);
-	registerDriver("led3", &led2);
-	registerDriver("led2", &led3);
+	registerDriver("led2", &led2);
+	registerDriver("led3", &led3);
 	registerDriver("timer0", &timer0);
 }
 
