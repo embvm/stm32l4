@@ -37,7 +37,8 @@ class STM32I2CMaster final : public embvm::i2c::master
 		i2c1 = 0,
 		i2c2,
 		i2c3,
-		i2c4
+		i2c4,
+		NUM_I2C_DEVICES
 	};
 
   public:
@@ -75,6 +76,9 @@ class STM32I2CMaster final : public embvm::i2c::master
 	STM32DMA& rx_channel_;
 	// TODO: temporary, refactor out
 	bool transfer_completed_ = false;
+	// TODO: ?
+	//embvm::i2c::master::cb_t active_cb_{nullptr};
+	embvm::i2c::op_t active_op_{};
 };
 
 #endif // STM32_I2C_HPP_

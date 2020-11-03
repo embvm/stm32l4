@@ -40,6 +40,7 @@
 #pragma mark - Definitions -
 
 constexpr size_t MAX_I2C_TRANSFER_SIZE_BYTES = 255;
+using STM32I2C_cb_t = stdext::inplace_function<void(embvm::i2c::status)>;
 
 #pragma mark - Types and Declarations -
 
@@ -104,25 +105,33 @@ constexpr std::array<STM32_I2C_Pins_t, 4> i2c_pins =
 };
 // clang-format on
 
-constexpr std::array<I2C_TypeDef* const, 4> i2c_instance = {I2C1, I2C2, I2C3, I2C4};
+enum class end_transfer_option : uint8_t {
+	IGNORED = 0,
+	DO_NOTHING,
+	AUTOEND,
+	START_RX,
+};
 
-constexpr std::array<uint32_t, 4> dma_tx_routing = {LL_DMAMUX_REQ_I2C1_TX, LL_DMAMUX_REQ_I2C2_TX,
+constexpr unsigned I2C_COUNT = STM32I2CMaster::device::NUM_I2C_DEVICES;
+
+constexpr std::array<I2C_TypeDef* const, I2C_COUNT> i2c_instance = {I2C1, I2C2, I2C3, I2C4};
+
+constexpr std::array<uint32_t, I2C_COUNT> dma_tx_routing = {LL_DMAMUX_REQ_I2C1_TX, LL_DMAMUX_REQ_I2C2_TX,
 													LL_DMAMUX_REQ_I2C3_TX, LL_DMAMUX_REQ_I2C4_TX};
 
-constexpr std::array<uint32_t, 4> dma_rx_routing = {LL_DMAMUX_REQ_I2C1_RX, LL_DMAMUX_REQ_I2C2_RX,
+constexpr std::array<uint32_t, I2C_COUNT> dma_rx_routing = {LL_DMAMUX_REQ_I2C1_RX, LL_DMAMUX_REQ_I2C2_RX,
 													LL_DMAMUX_REQ_I2C3_RX, LL_DMAMUX_REQ_I2C4_RX};
 
-// TODO:
-// static std::array<embvm::timer::cb_t, 9> i2c_callbacks = {nullptr};
+static std::array<STM32I2C_cb_t, I2C_COUNT> i2c_callbacks = {nullptr};
 
-constexpr std::array<uint8_t, 4> event_irq_num = {I2C1_EV_IRQn, I2C2_EV_IRQn, I2C3_EV_IRQn,
+constexpr std::array<uint8_t, I2C_COUNT> event_irq_num = {I2C1_EV_IRQn, I2C2_EV_IRQn, I2C3_EV_IRQn,
 												  I2C4_EV_IRQn};
 
-constexpr std::array<uint8_t, 4> error_irq_num = {I2C1_ER_IRQn, I2C2_ER_IRQn, I2C3_ER_IRQn,
+constexpr std::array<uint8_t, I2C_COUNT> error_irq_num = {I2C1_ER_IRQn, I2C2_ER_IRQn, I2C3_ER_IRQn,
 												  I2C4_ER_IRQn};
 
-static std::array<size_t, 4> transfer_reload_size = {0};
-static std::array<bool, 4> transfer_reload_autoend = {false};
+static std::array<size_t, I2C_COUNT> transfer_reload_size = {0};
+static std::array<end_transfer_option, I2C_COUNT> end_of_transfer_action = {false};
 
 #pragma mark - Helpers -
 
@@ -173,14 +182,14 @@ static std::tuple<size_t, uint32_t> check_and_adjust_transfer_size(const STM32I2
 		transfer_reload_size[dev] = op_buffer_size - MAX_I2C_TRANSFER_SIZE_BYTES;
 		bytes_for_immediate_transfer = MAX_I2C_TRANSFER_SIZE_BYTES;
 		actual_end_mode = LL_I2C_MODE_RELOAD;
-		transfer_reload_autoend[dev] = (desired_end_mode == LL_I2C_MODE_AUTOEND);
+		end_of_transfer_action[dev] = (desired_end_mode == LL_I2C_MODE_AUTOEND) ? end_transfer_option::AUTOEND : end_transfer_option::DO_NOTHING;
 	}
 	else
 	{
 		bytes_for_immediate_transfer = op_buffer_size;
 		transfer_reload_size[dev] = 0;
 		actual_end_mode = desired_end_mode;
-		transfer_reload_autoend[dev] = false;
+		end_of_transfer_action[dev] = end_transfer_option::IGNORED;
 	}
 
 	return {bytes_for_immediate_transfer, actual_end_mode};
@@ -191,9 +200,13 @@ static std::tuple<size_t, uint32_t> check_and_adjust_transfer_size(const STM32I2
  * @param [in] dev The device ID, which is used for accessing the arrays
  * @param [in] inst The device instance, which saves us a dereference + assert since
  * 	we've already checked this in the caller's context.
+ *
+ * @returns a flag indicating whether the transfer is complete (true) or not (false)
  */
-static void transfer_reload_or_end(const STM32I2CMaster::device dev, I2C_TypeDef* const inst)
+[[nodiscard]] static bool transfer_reload_or_end(const STM32I2CMaster::device dev, I2C_TypeDef* const inst)
 {
+	bool complete = false;
+
 	auto size = transfer_reload_size[dev];
 	if(size > MAX_I2C_TRANSFER_SIZE_BYTES)
 	{
@@ -203,18 +216,22 @@ static void transfer_reload_or_end(const STM32I2CMaster::device dev, I2C_TypeDef
 	}
 	else if(size == 0)
 	{
+		complete = true;
 		LL_I2C_DisableReloadMode(inst);
 
 		// Check auto-end logic
-		if(transfer_reload_autoend[dev])
+		if(end_of_transfer_action[dev] == end_transfer_option::AUTOEND)
 		{
 			LL_I2C_GenerateStopCondition(inst);
 		}
 	}
 	else
 	{
+		transfer_reload_size[dev] = 0;
 		LL_I2C_SetTransferSize(inst, size);
 	}
+
+	return complete;
 }
 
 #pragma mark - Interrupt Handlers -
@@ -238,16 +255,38 @@ static void i2c_event_handler(STM32I2CMaster::device dev)
 {
 	auto inst = i2c_instance[dev];
 	assert(inst); // invalid instance
+	auto cb = i2c_callbacks[dev];
+	bool transfer_complete = false;
+	auto status = embvm::i2c::status::ok;
 
 	if(LL_I2C_IsActiveFlag_TCR(inst))
 	{
-		transfer_reload_or_end(dev, inst);
+		transfer_complete = transfer_reload_or_end(dev, inst);
+	}
+	else if(LL_I2C_IsActiveFlag_TC(inst))
+	{
+		// Happens hwen RELOAD=0, AUTOEND=0, and NBYTES have been transferred
+		transfer_complete = true;
 	}
 	else if(LL_I2C_IsActiveFlag_STOP(inst))
 	{
-		// End of transfer?
+		// True when AUTOEND is set.
 		LL_I2C_ClearFlag_STOP(inst);
-		// Todo: master complete callback
+		transfer_complete = true;
+	}
+	else if(LL_I2C_IsActiveFlag_NACK(inst))
+	{
+		LL_I2C_ClearFlag_NACK(inst);
+		transfer_complete = true;
+		// TODO: how to differentiate between ADDR nack and data nack here?
+		// Probably need to use LL_I2C_ICR_ADDRCF - if not set, then we have addr nack?
+		status = embvm::i2c::status::dataNACK;
+	}
+
+	// TODO: dispatch this to an IRQ bottom-half handler
+	if(transfer_complete && cb)
+	{
+		cb(status);
 	}
 }
 
@@ -466,24 +505,14 @@ void STM32I2CMaster::configureDMA() noexcept
 
 	// TODO: does this happen here? or only if we need to handle special cases?
 	tx_channel_.registerCallback([this](STM32DMA::status status) {
-		if(status == STM32DMA::status::ok)
-		{
-			// TODO: proper to do this here? tx_channel_.disable();
-			transfer_completed_ = true;
-		}
-		else
+		if(status != STM32DMA::status::ok)
 		{
 			// TODO: handle error?
 			assert(0); // transfer failed
 		}
 	});
 	rx_channel_.registerCallback([this](STM32DMA::status status) {
-		if(status == STM32DMA::status::ok)
-		{
-			/// TODO: proper to do this here? rx_channel_.disable();
-			transfer_completed_ = true;
-		}
-		else
+		if(status != STM32DMA::status::ok)
 		{
 			// TODO: handle error?
 			assert(0); // transfer failed
@@ -534,9 +563,6 @@ void STM32I2CMaster::enableInterrupts() noexcept
 	 *  - Enable Error interrupts
 	 *  - Enable Stop interrupt
 	 */
-	// TODO: are these actually needed for DMA mode?
-	// LL_I2C_EnableIT_TX(inst);
-	// LL_I2C_EnableIT_RX(inst);
 	LL_I2C_EnableIT_NACK(inst);
 	LL_I2C_EnableIT_ERR(inst); // Enables Arbitration loss, Bus error, overrun/underrun errors
 	LL_I2C_EnableIT_STOP(inst);
@@ -550,9 +576,6 @@ void STM32I2CMaster::disableInterrupts() noexcept
 	auto inst = i2c_instance[device_];
 	assert(error_irq && event_irq && inst); // Check that channel is supported
 
-	// TODO: are these actually needed for DMA mode?
-	// LL_I2C_DisableIT_TX(inst);
-	// LL_I2C_DisableIT_RX(inst);
 	LL_I2C_DisableIT_NACK(inst);
 	LL_I2C_DisableIT_ERR(inst);
 	LL_I2C_DisableIT_STOP(inst);
@@ -576,7 +599,13 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 	// to do this manually.
 	uint32_t address = static_cast<uint32_t>(op.address << 1);
 
+	// Reset per-transfer settings
 	transfer_completed_ = false;
+	i2c_callbacks[device_] = nullptr;
+
+	// TODO: need to check if busy, or else we return (see nRF52 implementation)
+	// TODO: should this be a move, not a copy?
+	active_op_ = op;
 
 	/** A Note on Large Transfers (> 255 bytes)
 	 *
@@ -624,15 +653,40 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 			break;
 		}
 		case embvm::i2c::operation::writeRead: {
-			// TODO: implement... need to call twice
-			// First, START_WRITE, then START READ?
-			assert(0);
+			std::tie(transfer_size, end_mode) = check_and_adjust_transfer_size(device_, op.tx_size, LL_I2C_MODE_SOFTEND);
+			generate_mode = LL_I2C_GENERATE_START_WRITE;
+
+			// Override auto-end setting to specify that we need to kick off a read
+			// if we are in RELOAD mode.
+			end_of_transfer_action[device_] = end_transfer_option::START_RX;
+
+			// TODO: does this need adjusted in full async mode?
+			// Register intermediate callback that enables receive
+			i2c_callbacks[device_] = [this](auto status)
+			{
+				(void) status;
+				// Disable TX DMA, put us in RX mode.
+				tx_channel_.disable();
+				auto [transfer_size, end_mode] = check_and_adjust_transfer_size(device_, active_op_.rx_size, LL_I2C_MODE_AUTOEND);
+				auto inst = i2c_instance[device_];
+				enableDMARx(rx_channel_, inst, active_op_.rx_buffer, active_op_.rx_size);
+				LL_I2C_HandleTransfer(inst, active_op_.address << 1, LL_I2C_ADDRSLAVE_7BIT, transfer_size, end_mode, LL_I2C_GENERATE_START_READ);
+				i2c_callbacks[device_] = i2c_callbacks[device_] = [this](auto s)
+				{
+					assert(s == embvm::i2c::status::ok);
+					transfer_completed_ = true;
+					tx_channel_.disable();
+					rx_channel_.disable();
+				};
+			};
+			enableDMATx(tx_channel_, i2c_inst, op.tx_buffer, op.tx_size);
 			break;
 		}
 		case embvm::i2c::operation::ping: {
 			// TODO: zero-bytes correct here?
 			// TODO: do we need to enable LL_I2C_EnableIT_ADDR, at least for ping?? Need to disable
 			// somewhere too..
+			// TODO: we need to check for ping errors properly in interrupt handler
 			assert(0);
 			transfer_size = 0;
 			end_mode = LL_I2C_MODE_AUTOEND;
@@ -659,17 +713,29 @@ embvm::i2c::status STM32I2CMaster::transfer_(const embvm::i2c::op_t& op,
 		}
 	}
 
+	// If we didn't set a custom handler above, we need to set a default handler here.
+	// TODO: make this properly work in async mode
+	// TODO: make this a function so we can eliminate duplication in writeRead case above.
+	if(!i2c_callbacks[device_])
+	{
+		i2c_callbacks[device_] = [this](auto s)
+		{
+			assert(s == embvm::i2c::status::ok);
+			transfer_completed_ = true;
+			tx_channel_.disable();
+			rx_channel_.disable();
+		};
+	}
+
+	// Start the transfer
 	LL_I2C_HandleTransfer(i2c_inst, address, LL_I2C_ADDRSLAVE_7BIT, transfer_size, end_mode,
 						  generate_mode);
 
 	// TODO: this needs to return enqueued and handle things asynchronously... for now we block.
-	while(!transfer_completed_ && !LL_I2C_IsActiveFlag_STOP(i2c_inst))
+	while(!transfer_completed_)
 		;
 
-	// TODO: this doesn't belong here, but the method of disabling the channel during the interrupt
-	// Was not reliable and was causing assert failures in setAddresses
-	// We need a more reliable method... I2C transfer done?
-	tx_channel_.disable();
+	// TODO: make sure error is properly reported
 
 	return status;
 }
