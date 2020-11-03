@@ -203,9 +203,13 @@ static void transfer_reload_or_end(const STM32I2CMaster::device dev, I2C_TypeDef
 	}
 	else if(size == 0)
 	{
-		// Check auto-end logic
 		LL_I2C_DisableReloadMode(inst);
-		LL_I2C_GenerateStopCondition(inst);
+
+		// Check auto-end logic
+		if(transfer_reload_autoend[dev])
+		{
+			LL_I2C_GenerateStopCondition(inst);
+		}
 	}
 	else
 	{
