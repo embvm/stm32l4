@@ -47,8 +47,8 @@ class NucleoL4R5ZI_HWPlatform : public embvm::VirtualHwPlatformBase<NucleoL4R5ZI
 	// TODO: this isn't actually quite 1s right now...
 	STM32Timer timer0{embvm::timer::channel::CH2, std::chrono::seconds(1)};
 
-	STM32DMA dma_ch_i2c_tx{STM32DMA::device::dma1, STM32DMA::channel::CH2};
-	STM32DMA dma_ch_i2c_rx{STM32DMA::device::dma1, STM32DMA::channel::CH3};
+	STM32DMA dma_ch_i2c_tx{STM32DMA::device::dma1, STM32DMA::channel::CH1};
+	STM32DMA dma_ch_i2c_rx{STM32DMA::device::dma1, STM32DMA::channel::CH2};
 	STM32I2CMaster i2c2{STM32I2CMaster::device::i2c2, dma_ch_i2c_tx, dma_ch_i2c_rx};
 };
 
