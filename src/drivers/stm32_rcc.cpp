@@ -1,3 +1,6 @@
+// Copyright 2020 Embedded Artistry LLC
+// SPDX-License-Identifier: MIT
+
 #include "stm32_rcc.hpp"
 #include <array>
 #include <processor_includes.hpp>

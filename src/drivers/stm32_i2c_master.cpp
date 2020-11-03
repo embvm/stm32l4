@@ -1,3 +1,6 @@
+// Copyright 2020 Embedded Artistry LLC
+// SPDX-License-Identifier: MIT
+
 #include "stm32_i2c_master.hpp"
 #include <array>
 #include <cassert>

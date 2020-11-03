@@ -1,3 +1,6 @@
+// Copyright 2020 Embedded Artistry LLC
+// SPDX-License-Identifier: MIT
+
 #ifndef STM32L4R5_PROCESSOR_ARCH_DEF_HPP_
 #define STM32L4R5_PROCESSOR_ARCH_DEF_HPP_
 

@@ -1,3 +1,6 @@
+// Copyright 2020 Embedded Artistry LLC
+// SPDX-License-Identifier: MIT
+
 /**
  ******************************************************************************
  * @file    Templates/Src/stm32l4xx_it.c

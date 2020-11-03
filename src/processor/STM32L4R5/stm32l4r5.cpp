@@ -1,3 +1,6 @@
+// Copyright 2020 Embedded Artistry LLC
+// SPDX-License-Identifier: MIT
+
 #include "stm32l4r5.hpp"
 #include <processor_architecture.hpp>
 #include <processor_includes.hpp>

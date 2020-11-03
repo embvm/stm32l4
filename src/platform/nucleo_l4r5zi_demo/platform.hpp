@@ -1,7 +1,5 @@
-/*
- * Copyright © 2020 Embedded Artistry LLC.
- * See LICENSE file for licensing information.
- */
+// Copyright 2020 Embedded Artistry LLC
+// SPDX-License-Identifier: MIT
 
 #ifndef NUCLEO_L4RZI_DEMO_PLATFORM_HPP_
 #define NUCLEO_L4RZI_DEMO_PLATFORM_HPP_

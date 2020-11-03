@@ -1,7 +1,5 @@
-/*
- * Copyright © 2020 Embedded Artistry LLC.
- * See LICENSE file for licensing information.
- */
+// Copyright 2020 Embedded Artistry LLC
+// SPDX-License-Identifier: MIT
 
 #include "platform.hpp"
 #include <printf.h> // for _putchar definition

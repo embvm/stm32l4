@@ -1,3 +1,6 @@
+// Copyright 2020 Embedded Artistry LLC
+// SPDX-License-Identifier: MIT
+
 #ifndef STM32_DMA_HPP_
 #define STM32_DMA_HPP_
 

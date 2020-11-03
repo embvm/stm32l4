@@ -1,3 +1,6 @@
+// Copyright 2020 Embedded Artistry LLC
+// SPDX-License-Identifier: MIT
+
 #ifndef STM32_I2C_MASTER_HPP_
 #define STM32_I2C_MASTER_HPP_
 
