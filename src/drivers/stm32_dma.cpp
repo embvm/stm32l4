@@ -206,7 +206,6 @@ void STM32DMA::disable() noexcept
 {
 	auto inst = dma_devices[device_];
 	assert(inst); // Check for invalid device instance
-	assert(LL_DMA_IsEnabledChannel(inst, channel_));
 
 	LL_DMA_DisableChannel(inst, channel_);
 }

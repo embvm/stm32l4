@@ -155,7 +155,6 @@ class STM32DMA final : public embvm::DriverBase
 
 	/** Disable the DMA device for executing transfer.
 	 *
-	 * @precondition The DMA device is enabled.
 	 * @postcondition The DMA device is disabled.
 	 */
 	void disable() noexcept;
