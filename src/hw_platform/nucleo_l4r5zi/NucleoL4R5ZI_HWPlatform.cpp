@@ -1,4 +1,4 @@
-#include "NucleoL4RZI_HWPlatform.hpp"
+#include "NucleoL4R5ZI_HWPlatform.hpp"
 #include <stm32_rcc.hpp>
 
 // TODO: shoudl I check/increae clock speed?

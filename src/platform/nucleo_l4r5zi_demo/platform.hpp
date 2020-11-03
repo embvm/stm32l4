@@ -6,7 +6,7 @@
 #ifndef NUCLEO_L4RZI_DEMO_PLATFORM_HPP_
 #define NUCLEO_L4RZI_DEMO_PLATFORM_HPP_
 
-#include <NucleoL4RZI_HWPlatform.hpp>
+#include <NucleoL4R5ZI_HWPlatform.hpp>
 #include <boot/boot_sequencer.hpp>
 #include <platform/virtual_platform.hpp>
 #include <platform_options.hpp>
