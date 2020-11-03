@@ -2,7 +2,7 @@
 
 This repository provides Embedded VM ecosystem support for SMT32L4 processors.
 
-Note that this project is dual-licensed. The open-source version of this project is released under GPLv3. [A commercial license](https://embeddedartistry.com/product/embedded-virtual-machine-commercial-license), which provides holders with the ability to create and distribute software without open-source obligations, can be purchased in the [Embedded Artistry store](https://embeddedartistry.com/store).
+The [source code for this project](src) is released under the MIT license. Note that the [`embvm-core`](https://github.com/embvm/embvm-core) project itself is dual-licensed as GPLv3 with a commercial licensing option. Please note that using this module as-is will pull in the `embvm-core` project for compiling the end application, requiring you to abide by the GPLv3 or commercial licensing terms.
 
 ## Table of Contents
 
@@ -222,9 +222,9 @@ If you are interested in contributing to this project, please read our [contribu
 
 Copyright © 2020 Embedded Artistry LLC
 
-Note that this project is dual-licensed. The open-source version of this project is released under GPLv3. [A commercial license](https://embeddedartistry.com/product/embedded-virtual-machine-commercial-license), which provides holders with the ability to create and distribute software without open-source obligations, can be purchased in the [Embedded Artistry store](https://embeddedartistry.com/store).
+The [source code for this project](src) is released under the MIT license. Note that the [`embvm-core`](https://github.com/embvm/embvm-core) project itself is dual-licensed as GPLv3 with a commercial licensing option. Please note that using this module as-is will pull in the `embvm-core` project for compiling the end application, requiring you to abide by the GPLv3 or commercial licensing terms.
 
-See the [LICENSE](LICENSE) file for further licensing details.
+See the [LICENSE.md](LICENSE.md) file for further licensing details.
 
 **[Back to top](#table-of-contents)**
 
