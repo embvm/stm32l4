@@ -2,6 +2,8 @@
 
 This repository provides Embedded VM ecosystem support for SMT32L4 processors.
 
+
+
 The [source code for this project](src) is released under the MIT license. Note that the [`embvm-core`](https://github.com/embvm/embvm-core) project itself is dual-licensed as GPLv3 with a commercial licensing option. Please note that using this module as-is will pull in the `embvm-core` project for compiling the end application, requiring you to abide by the GPLv3 or commercial licensing terms.
 
 ## Table of Contents
@@ -25,7 +27,17 @@ The [source code for this project](src) is released under the MIT license. Note 
 
 # About the Project
 
-This repository provides support for SMT32L4 processors. Currently, the implementation wraps the STM32 LL HAL library with Embedded VM compatible interfaces.
+This repository provides support for STM32L4 processor family; currently targeted at support for STM32L4R5xx processors, with support expanding in the near future.
+
+Currently supported drivers:
++ GPIO
++ DMA
++ Timer (in Timer Base mode)
++ I2C Master (DMA + Interrupts only)
+
+This project also provides a minimal hardware platform, platform, and blinky application that work on an STM32L4R5 Nucleo board.
+
+> **Note:** This implementation wraps the STM32 LL HAL library with Embedded VM compatible interfaces.
 
 **[Back to top](#table-of-contents)**
 
