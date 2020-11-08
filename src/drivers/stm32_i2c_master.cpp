@@ -134,7 +134,7 @@ constexpr std::array<uint8_t, I2C_COUNT> error_irq_num = {I2C1_ER_IRQn, I2C2_ER_
 												  I2C4_ER_IRQn};
 
 static std::array<size_t, I2C_COUNT> transfer_reload_size = {0};
-static std::array<end_transfer_option, I2C_COUNT> end_of_transfer_action = {false};
+static std::array<end_transfer_option, I2C_COUNT> end_of_transfer_action = {end_transfer_option::DO_NOTHING};
 
 #pragma mark - Helpers -
 
