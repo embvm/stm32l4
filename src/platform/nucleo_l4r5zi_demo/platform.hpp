@@ -7,7 +7,6 @@
 #include <NucleoL4R5ZI_HWPlatform.hpp>
 #include <boot/boot_sequencer.hpp>
 #include <platform/virtual_platform.hpp>
-#include <platform_options.hpp>
 
 /// Signal variable to exit the main() loop
 /// Declared in main.cpp
