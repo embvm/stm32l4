@@ -3,7 +3,7 @@ stm32l4r5_processor_default_files = files(
 	'internal/system_stm32l4xx.c', # TODO: can this be shared across processors? Or is it just a common name with diff implementations for each board/proc?
 	'internal/startup_stm32l4r5xx.s',
 )
-stm32l4r5_processor_files = stm32l4r5_processor_default_files # TODO: placeholder until we find optionality
+stm32l4r5_processor_files = get_variable('stm32l4r5_processor_files', stm32l4r5_processor_default_files)
 
 stm32l4r5 = static_library('stm32l4r5',
 	sources: [
@@ -27,6 +27,7 @@ stm32l4r5 = static_library('stm32l4r5',
         arm_dep,
         stm32_common_drivers_dep,
 	],
+	native: false,
 	build_by_default: meson.is_subproject() == false
 )
 
