@@ -99,15 +99,17 @@ subdir('build/objcopy')
 # Subprojects #
 ###############
 
-stm32cube_subproject = subproject('STM32CubeL4')
-stm32_cmsis_device_dep = stm32cube_subproject.get_variable('stm32_cmsis_device_dep')
-stm32_hal_dep = stm32cube_subproject.get_variable('stm32_hal_dep')
-stm32_ll_dep = stm32cube_subproject.get_variable('stm32_ll_dep')
-
 embvm_core_subproject = subproject('embvm-core')
 framework_include_dep = embvm_core_subproject.get_variable('framework_include_dep')
 framework_host_include_dep = embvm_core_subproject.get_variable('framework_host_include_dep')
 framework_threadless_dep = embvm_core_subproject.get_variable('framework_threadless_dep')
+
+cmsis_device_l4_subproject = subproject('cmsis_device_l4')
+stm32l4_cmsis_device_dep = cmsis_device_l4_subproject.get_variable('stm32l4_cmsis_device_dep')
+
+stm32l4_hal_subproject = subproject('stm32l4xx_hal_driver')
+stm32_hal_dep = stm32l4_hal_subproject.get_variable('stm32_hal_dep')
+stm32_ll_dep = stm32l4_hal_subproject.get_variable('stm32_ll_dep')
 
 arm_architecture_subproject = subproject('arm-architecture')
 arm_dep = arm_architecture_subproject.get_variable('arm_dep')
