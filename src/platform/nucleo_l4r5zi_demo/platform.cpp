@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 #include "platform.hpp"
-#include <printf.h> // for _putchar definition
+#include <printf.h> // for putchar_ definition
 // TODO: test memory setup with linker scripts
 //#include <malloc.h>
 
 // extern int __HeapBase;
 // extern int __HeapLimit;
 
-void _putchar(char c)
+void putchar_(char c)
 {
 	(void)c;
 	// TODO: implement

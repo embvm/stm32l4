@@ -859,12 +859,12 @@ to
 
 ### putchar
 
-We also need a `_putchar` reference. Let's add that to the platform:
+We also need a `putchar_` reference. Let's add that to the platform:
 
 ```
-#include <printf.h> // for _putchar definition
+#include <printf.h> // for putchar_ definition
 
-void _putchar(char c)
+void putchar_(char c)
 {
     // TODO:
 }
