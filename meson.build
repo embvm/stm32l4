@@ -11,7 +11,7 @@ project('PROJECT_NAME',
 		'c_std=c11', 'build.c_std=c11',
 		'cpp_std=c++17', 'build.cpp_std=c++17',
 	],
-	meson_version: '>=0.56.0',
+	meson_version: '>=0.58.0',
 	version: '0.1'
 )
 
@@ -138,7 +138,7 @@ subdir('src')
 ###################
 
 clangformat_targets = [
-	meson.source_root() / 'src'
+	meson.project_source_root() / 'src'
 ]
 
 subdir('meson/analysis/clang-tidy')
@@ -157,9 +157,9 @@ subdir('meson/docs/doxygen')
 # include paths. Examples:
 #	build_root_include.format('doc'),
 #	app_include.format('APP')
-build_root_include = meson.build_root() + ':@0@'
-app_include = meson.build_root() / 'src/app:@0@'
-lib_include = meson.build_root() / 'src/lib:@0@'
+build_root_include = meson.project_build_root() + ':@0@'
+app_include = meson.project_build_root() / 'src/app:@0@'
+lib_include = meson.project_build_root() / 'src/lib:@0@'
 
 host_pkg_files = [
 	build_root_include.format('docs'),
